@@ -57,16 +57,16 @@ body::after{background:radial-gradient(circle at center,transparent 54%,rgba(0,0
 .book-root::after{content:"";position:absolute;left:4%;right:4%;bottom:-42px;height:84px;border-radius:999px;background:radial-gradient(circle at center,rgba(0,0,0,0.38),transparent 70%);filter:blur(24px);pointer-events:none}
 .book-frame{position:relative;width:var(--shell-width);height:var(--page-height);overflow:visible;transform-origin:center center;transform-style:preserve-3d;transform:scale(var(--frame-scale)) translate3d(var(--shell-shift-x),0,0) translateZ(0);will-change:transform,width;transition:width 1600ms cubic-bezier(0.645,0.045,0.355,1)}
 .closed-book,.spread-book{position:absolute;height:var(--page-height);transform-style:preserve-3d;will-change:transform,opacity;pointer-events:none;top:50%;left:50%;transform:translate(-50%,-50%)}
-.closed-book{width:var(--page-width);z-index:18}
-.spread-book{width:var(--spread-width);z-index:10;opacity:clamp(0,calc(var(--open-progress)*1.25),1);transition:opacity 1600ms cubic-bezier(0.645,0.045,0.355,1);transform-style:preserve-3d}
+.closed-book{width:var(--page-width);z-index:18;pointer-events:none}
+.spread-book{width:var(--spread-width);z-index:10;opacity:clamp(0,calc(var(--open-progress)*1.25),1);transition:opacity 1600ms cubic-bezier(0.645,0.045,0.355,1);transform-style:preserve-3d;pointer-events:none}
 .cover-halo{position:absolute;inset:0;pointer-events:none;z-index:1}
 .cover-halo::before{content:"";position:absolute;right:0;top:32px;bottom:32px;width:var(--page-width);border-radius:30px;background:radial-gradient(60% 80% at 50% 62%,rgba(0,0,0,0.28),transparent 72%),radial-gradient(54% 44% at 50% 100%,rgba(255,216,193,0.09),transparent 74%);filter:blur(18px);pointer-events:none}
 .page-wrapper{transform-style:preserve-3d;will-change:transform,opacity}
 .cover-wrapper{position:absolute;top:0;right:0;width:var(--page-width);height:var(--page-height);transform-origin:left center;pointer-events:auto;transform-style:preserve-3d;transform:translate3d(0,0,calc(var(--open-progress)*22px)) rotateY(calc(var(--open-progress)*-180deg));transition:transform 1600ms cubic-bezier(0.645,0.045,0.355,1),opacity 1600ms cubic-bezier(0.645,0.045,0.355,1);z-index:20}
 .app-shell[data-closed-face="back"] .cover-wrapper{transform:translate3d(0,0,calc(var(--open-progress)*22px)) rotateY(calc(var(--open-progress)*180deg))}
 .app-shell[data-book-state="open"] .cover-wrapper{opacity:0;pointer-events:none}
-.cover-page{cursor:pointer;pointer-events:auto}
-.cover-cta{position:absolute;z-index:60;pointer-events:auto}
+.cover-page{cursor:pointer;pointer-events:auto!important;z-index:50}
+.cover-cta{position:absolute;z-index:60;pointer-events:auto!important;cursor:pointer}
 .page-stack{position:absolute;top:18px;bottom:18px;width:24px;pointer-events:none;background:linear-gradient(180deg,rgba(255,255,255,0.95),rgba(238,228,218,0.92)),repeating-linear-gradient(180deg,rgba(148,121,105,0.1) 0 2px,rgba(255,255,255,0.03) 2px 4px);box-shadow:inset 0 1px 0 rgba(255,255,255,0.78)}
 .stack-left{left:0;border-radius:18px 0 0 18px;transform:translateX(-12px) translateZ(-2px)}
 .stack-right{right:0;border-radius:0 18px 18px 0;transform:translateX(12px) translateZ(-2px)}
@@ -78,9 +78,9 @@ body::after{background:radial-gradient(circle at center,transparent 54%,rgba(0,0
 /* Double Buffer System - Only ONE visible layer at a time */
 .spread{position:absolute;inset:0;width:var(--spread-width);height:var(--page-height);display:grid;grid-template-columns:var(--page-width) var(--page-width);gap:var(--page-gap);transform-style:preserve-3d}
 /* Active Layer - ALWAYS visible, z-index high */
-.spread.active-layer{z-index:50;opacity:1;visibility:visible;pointer-events:auto}
+.spread.active-layer{z-index:50;opacity:1;visibility:visible;pointer-events:auto!important}
 /* Buffer Layer - ALWAYS hidden until atomic swap, z-index low */
-.spread.buffer-layer{z-index:1;opacity:0;visibility:hidden;pointer-events:none}
+.spread.buffer-layer{z-index:1;opacity:0;visibility:hidden;pointer-events:none!important}
 /* Turn Layer - TEMPORARY, only during animation, highest z-index */
 .spread.turn-layer{z-index:100;opacity:1;visibility:visible;pointer-events:none}
 /* During turn: hide under content completely, show ONLY turnLayer */
@@ -113,7 +113,7 @@ body::after{background:radial-gradient(circle at center,transparent 54%,rgba(0,0
 .peel-face.front::after,.peel-face.back::after{content:"";position:absolute;inset:0;border-radius:inherit;pointer-events:none}
 .peel-face.front::after{background:linear-gradient(90deg,rgba(24,15,12,calc(0.04 + var(--peel-shadow-front)*0.48)),rgba(24,15,12,0) 58%,rgba(255,255,255,0.03));mix-blend-mode:multiply;opacity:calc(0.2 + var(--peel-shadow-front)*0.82)}
 .peel-face.back::after{background:linear-gradient(270deg,rgba(24,15,12,calc(0.03 + var(--peel-shadow-back)*0.28)),rgba(255,255,255,0.02) 20%,transparent 70%);opacity:calc(0.15 + var(--peel-shadow-back)*0.68)}
-.corner-hit{appearance:none;position:absolute;z-index:50;width:120px;height:168px;border:0;background:transparent;cursor:pointer;opacity:0}
+.corner-hit{appearance:none;position:absolute;z-index:150;width:120px;height:168px;border:0;background:transparent;cursor:pointer;opacity:0;pointer-events:auto!important}
 .corner-hit.prev.top{left:-18px;top:-8px}
 .corner-hit.prev.bottom{left:-18px;bottom:-8px}
 .corner-hit.next.top{right:-18px;top:-8px}
@@ -457,12 +457,14 @@ function bindEvents(){
   if(!dom.coverPage||!dom.coverCta)return;
   dom.coverPage.addEventListener('click',()=>openBook());
   dom.coverCta.addEventListener('click',()=>openBook());
-  dom.btnPrev.addEventListener('click',()=>goBackward());
-  dom.btnNext.addEventListener('click',()=>goForward());
-  dom.cornerPrevTop.addEventListener('click',()=>goBackward());
-  dom.cornerPrevBottom.addEventListener('click',()=>goBackward());
-  dom.cornerNextTop.addEventListener('click',()=>goForward());
-  dom.cornerNextBottom.addEventListener('click',()=>goForward());
+  
+  // Safe event binding for navigation buttons - check existence first
+  if(dom.btnPrev)dom.btnPrev.addEventListener('click',()=>goBackward());
+  if(dom.btnNext)dom.btnNext.addEventListener('click',()=>goForward());
+  if(dom.cornerPrevTop)dom.cornerPrevTop.addEventListener('click',()=>goBackward());
+  if(dom.cornerPrevBottom)dom.cornerPrevBottom.addEventListener('click',()=>goBackward());
+  if(dom.cornerNextTop)dom.cornerNextTop.addEventListener('click',()=>goForward());
+  if(dom.cornerNextBottom)dom.cornerNextBottom.addEventListener('click',()=>goForward());
   // UI buttons initialized in renderUI() after DOM is ready
   const onResize=debounce(()=>{syncLayout(false);renderCurrentView();updateUi();calculateScale();},150);
   mobileQuery.addEventListener('change',onResize);
