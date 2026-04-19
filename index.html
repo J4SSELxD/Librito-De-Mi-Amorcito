@@ -712,17 +712,11 @@ async function completeDragTurn(direction,fromProgress){
   // ATOMIC SWAP using double buffer system (same frame)
   requestAnimationFrame(()=>{
     try {
-      // Restore original page visibility after successful turn
-      dom.currentSpread.style.opacity='1';
-      dom.currentSpread.style.visibility='visible';
       performAtomicSwap(direction,state.drag.targetIndex);
     } catch(err) {
       console.error('Error in atomic swap:', err);
       state.animating=false;
       dom.app.dataset.turning='false';
-      // Restore on error
-      dom.currentSpread.style.opacity='1';
-      dom.currentSpread.style.visibility='visible';
       resetTurnVisuals();
       updateUi(true);
     }
