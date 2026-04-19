@@ -429,13 +429,13 @@ bindEvents();
 syncLayout(true);
 applyStaticMetrics();
 applyOpenState(0,'front');
-renderCurrentView();
-updateUi(true);
 
 requestAnimationFrame(()=>{
   state.bookState='closed';
   dom.app.dataset.ready='true';
   dom.app.dataset.bookState='closed';
+  renderCurrentView();
+  updateUi(true);
   calculateScale();
 });
 
