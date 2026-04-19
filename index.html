@@ -78,7 +78,7 @@ body::after{background:radial-gradient(circle at center,transparent 54%,rgba(0,0
 /* Turn Layer - TEMPORARY, only during animation, highest z-index */
 .spread.turn-layer{z-index:100;opacity:1;visibility:visible;pointer-events:none}
 /* During turn: hide under content completely, show ONLY turnLayer */
-.app-shell[data-turning="true"] .spread.buffer-layer{opacity:1!important;visibility:visible!important;z-index:40!important}
+.app-shell[data-turning="true"] .spread.buffer-layer{opacity:1!important;visibility:visible!important;z-index:40!important;pointer-events:auto!important}
 .app-shell[data-turning="true"] .spread.active-layer{opacity:1!important;visibility:visible!important}
 .page-sheet{position:relative;width:100%;height:100%;overflow:hidden;border-radius:var(--page-radius);transform-style:preserve-3d;will-change:transform,opacity;transform:translate3d(0,0,0);box-shadow:0 4px 20px rgba(0,0,0,0.08)}
 .page-face{position:absolute;inset:0;overflow:hidden;border-radius:var(--page-radius);background-color:var(--paper);background-position:center;background-repeat:no-repeat;background-size:cover;box-shadow:inset 0 0 0 1px rgba(120,94,77,0.08),0 14px 28px rgba(0,0,0,0.11);transform:translate3d(0,0,0);will-change:transform,opacity;backface-visibility:hidden;transform-style:preserve-3d}
