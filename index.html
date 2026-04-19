@@ -382,7 +382,7 @@ function applyStaticMetrics(){
   dom.app.style.setProperty('--spread-width',`${SETTINGS.pageWidth*2+SETTINGS.spreadGap}px`);
 }
 function getStep(){return state.layout==='single'?1:2;}
-function getLastOpenIndex(){if(state.layout==='single')return Math.max(1,state.pages.length-1);const last=Math.max(1,state.pages.length-1);return last%2===0?last-1:last;}
+function getLastOpenIndex(){if(state.layout==='single')return Math.max(1,state.pages.length-1);const last=Math.max(1,state.pages.length-1);return last%2===0?last:last-1;}
 function resolvePage(index){if(index<0)return null;if(index<state.pages.length)return state.pages[index]||null;if(state.layout==='spread'&&state.backCover&&index===state.pages.length)return state.backCover;return null;}
 function getClosedPage(){return state.closedFace==='back'?state.backCover:state.pages[0]||null;}
 function getView(index=state.currentIndex){
