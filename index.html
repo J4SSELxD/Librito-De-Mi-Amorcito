@@ -568,78 +568,71 @@ function prepareBufferLayer(direction,targetIndex){
 
 // ATOMIC SWAP: Execute layer swap in single frame - NO visual glitch
 function performAtomicSwap(direction,targetIndex){
-  // Step 1: Get new views for active layer (next spread after turn completes)
-  const fv=getView(targetIndex),fb=getStaticBackPages(targetIndex);
-  
-  // CRITICAL FIX: Update textures on buffer layer BEFORE making it visible
-  // This prevents any frame where stale data could be shown
-  setSheetTextures(dom.underLeftFront,dom.underLeftBack,fv.left,fb.leftBack);
-  setSheetTextures(dom.underRightFront,dom.underRightBack,fv.right,fb.rightBack);
-  
-  // Force style recalc to ensure textures are applied before visibility change
-  void dom.underLeftFront.offsetWidth;
-  
-  // Step 2: Restore opacity on pages that were hidden during turn (before swap)
-  // This ensures smooth transition without sudden appearance
-  if(direction>0){
-    // Right page was turning: restore right page opacity on old currentSpread
-    dom.currentRightFront.style.opacity='1';
-    dom.currentRightBack.style.opacity='1';
-  }else{
-    // Left page was turning: restore left page opacity on old currentSpread
-    dom.currentLeftFront.style.opacity='1';
-    dom.currentLeftBack.style.opacity='1';
+  try {
+    // Step 1: Get new views for active layer (next spread after turn completes)
+    const fv=getView(targetIndex),fb=getStaticBackPages(targetIndex);
+    
+    // CRITICAL: Ensure buffer layer has correct content BEFORE visibility swap
+    setSheetTextures(dom.underLeftFront,dom.underLeftBack,fv.left,fb.leftBack);
+    setSheetTextures(dom.underRightFront,dom.underRightBack,fv.right,fb.rightBack);
+    
+    // Force reflow to guarantee textures are painted
+    void dom.underLeftFront.offsetWidth;
+    void dom.underRightFront.offsetWidth;
+    
+    // Step 2: Restore opacity on static pages BEFORE swap (prevents flash)
+    if(direction>0){
+      dom.currentRightFront.style.opacity='1';
+      dom.currentRightBack.style.opacity='1';
+    }else{
+      dom.currentLeftFront.style.opacity='1';
+      dom.currentLeftBack.style.opacity='1';
+    }
+    
+    // Step 3: ATOMIC visibility swap - SAME FRAME, ZERO gap
+    // Use inline styles for immediate effect (faster than class toggle)
+    dom.underSpread.style.opacity='1';
+    dom.underSpread.style.visibility='visible';
+    dom.underSpread.style.pointerEvents='auto';
+    
+    dom.currentSpread.style.opacity='0';
+    dom.currentSpread.style.visibility='hidden';
+    dom.currentSpread.style.pointerEvents='none';
+    
+    // Step 4: Swap class names for CSS rules
+    dom.currentSpread.classList.remove('active-layer');
+    dom.currentSpread.classList.add('buffer-layer');
+    dom.underSpread.classList.remove('buffer-layer');
+    dom.underSpread.classList.add('active-layer');
+    
+    // Step 5: Swap DOM references
+    let tmp;
+    tmp=dom.currentSpread; dom.currentSpread=dom.underSpread; dom.underSpread=tmp;
+    tmp=dom.currentLeftFront; dom.currentLeftFront=dom.underLeftFront; dom.underLeftFront=tmp;
+    tmp=dom.currentLeftBack; dom.currentLeftBack=dom.underLeftBack; dom.underLeftBack=tmp;
+    tmp=dom.currentRightFront; dom.currentRightFront=dom.underRightFront; dom.underRightFront=tmp;
+    tmp=dom.currentRightBack; dom.currentRightBack=dom.underRightBack; dom.underRightBack=tmp;
+    
+    // Step 6: Clear OLD buffer (now hidden)
+    setSheetTextures(dom.underLeftFront,dom.underLeftBack,null,null);
+    setSheetTextures(dom.underRightFront,dom.underRightBack,null,null);
+    
+    // Step 7: Reset state
+    state.currentIndex=targetIndex;
+    state.animating=false;
+    dom.app.dataset.turning='false';
+    state.lastRenderedKey=[state.bookState,state.layout,state.currentIndex,state.closedFace,state.pages.length].join(':');
+    
+    // Step 8: Cleanup turn layer
+    resetTurnVisuals();
+    updateUi(true);
+  } catch(e) {
+    // Fallback: force recovery state
+    state.animating=false;
+    dom.app.dataset.turning='false';
+    resetTurnVisuals();
+    updateUi(true);
   }
-  
-  // Step 3: ATOMIC swap - hide old active, show buffer as new active (SAME RAF, NO gap)
-  // Buffer layer already has correct content from prepareBufferLayer()
-  dom.currentSpread.classList.remove('active-layer');
-  dom.currentSpread.classList.add('buffer-layer');
-  dom.underSpread.classList.remove('buffer-layer');
-  dom.underSpread.classList.add('active-layer');
-  
-  // CRITICAL: Reset opacity/visibility on spreads AFTER swap
-  // Old currentSpread (now buffer) should be hidden
-  dom.currentSpread.style.opacity='0';
-  dom.currentSpread.style.visibility='hidden';
-  // New currentSpread (was under) should be visible
-  dom.underSpread.style.opacity='1';
-  dom.underSpread.style.visibility='visible';
-  
-  // Step 3: Swap DOM references so future updates go to correct layers
-  const tempSpread = dom.currentSpread;
-  dom.currentSpread = dom.underSpread;
-  dom.underSpread = tempSpread;
-  
-  const tempLeftFront = dom.currentLeftFront;
-  dom.currentLeftFront = dom.underLeftFront;
-  dom.underLeftFront = tempLeftFront;
-  
-  const tempLeftBack = dom.currentLeftBack;
-  dom.currentLeftBack = dom.underLeftBack;
-  dom.underLeftBack = tempLeftBack;
-  
-  const tempRightFront = dom.currentRightFront;
-  dom.currentRightFront = dom.underRightFront;
-  dom.underRightFront = tempRightFront;
-  
-  const tempRightBack = dom.currentRightBack;
-  dom.currentRightBack = dom.underRightBack;
-  dom.underRightBack = tempRightBack;
-  
-  // Step 4: Clear OLD buffer layer textures (now hidden, prevents stale data)
-  setSheetTextures(dom.underLeftFront,dom.underLeftBack,null,null);
-  setSheetTextures(dom.underRightFront,dom.underRightBack,null,null);
-  
-  // Step 5: Reset state
-  state.currentIndex=targetIndex;
-  state.animating=false;
-  dom.app.dataset.turning='false';
-  state.lastRenderedKey=[state.bookState,state.layout,state.currentIndex,state.closedFace,state.pages.length].join(':');
-  
-  // Step 6: Cleanup turn layer visuals
-  resetTurnVisuals();
-  updateUi(true);
 }
 
 function applyTurn(direction,phased){
