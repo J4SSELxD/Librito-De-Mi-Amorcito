@@ -46,6 +46,8 @@ body::after{background:radial-gradient(circle at center,transparent 54%,rgba(0,0
 .zoom-pill{min-width:64px;padding:0 14px;font-size:12px;font-weight:700;letter-spacing:.08em;text-transform:uppercase}
 .stage-card{position:relative;width:100vw;height:100vh;display:flex;align-items:center;justify-content:center;overflow:hidden}
 .stage-card.fullscreen-wrapper,.stage-card:fullscreen{display:flex;justify-content:center;align-items:center;width:100vw;height:100vh;margin:0;padding:0;background:radial-gradient(980px 660px at 50% -12%,rgba(255,227,213,0.18),transparent 60%),linear-gradient(180deg,#2e221f 0%,#130f10 48%,#060506 100%)}
+.stage-card:fullscreen .topbar{position:fixed!important;visibility:visible!important;opacity:1!important}
+.stage-card:fullscreen .control-strip{pointer-events:auto!important}
 .stage-viewport{position:relative;width:100%;height:100%;display:flex;justify-content:center;align-items:center;overflow:hidden;touch-action:manipulation}
 .stage-surface{width:100%;height:100%;display:flex;justify-content:center;align-items:center}
 .book-root{position:relative;width:var(--spread-width);height:var(--page-height);display:flex;justify-content:center;align-items:center;perspective:2800px;perspective-origin:50% 50%;transform-style:preserve-3d;will-change:transform;transition:transform 120ms ease-out}
