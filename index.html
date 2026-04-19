@@ -34,10 +34,10 @@ body{overflow:hidden;color:var(--text);
 body::before,body::after{content:"";position:fixed;inset:0;pointer-events:none}
 body::before{opacity:.12;background:radial-gradient(circle at 18% 22%,rgba(255,255,255,0.45) 0 1px,transparent 1.4px),radial-gradient(circle at 72% 34%,rgba(255,255,255,0.24) 0 1px,transparent 1.4px);background-size:180px 180px,220px 220px}
 body::after{background:radial-gradient(circle at center,transparent 54%,rgba(0,0,0,0.24) 100%),linear-gradient(180deg,rgba(255,255,255,0.03),transparent 24%)}
-.app-shell{position:relative;width:100vw;height:100vh;overflow:hidden;display:flex;flex-direction:column;justify-content:center;padding-top:calc(60px + env(safe-area-inset-top));padding-bottom:calc(160px + env(safe-area-inset-bottom))}
+.app-shell{position:relative;width:100vw;height:100vh;overflow:hidden;display:flex;flex-direction:column;justify-content:center;padding-top:calc(80px + env(safe-area-inset-top));padding-bottom:calc(180px + env(safe-area-inset-bottom))}
 .viewer-shell{position:relative;flex:1;display:flex;align-items:center;justify-content:center;width:100%;min-height:0}
 .ui-root{position:fixed;left:0;right:0;top:max(12px,env(safe-area-inset-top));z-index:2147483647;display:flex;justify-content:center;align-items:center;pointer-events:none;padding:0 16px}
-.topbar{display:flex;justify-content:center;align-items:center;pointer-events:auto}
+.topbar{display:flex;justify-content:center;align-items:center;gap:16px;pointer-events:auto}
 .control-strip{display:flex;gap:12px;align-items:center;background:rgba(0,0,0,0.4);backdrop-filter:blur(20px);padding:10px 16px;border-radius:24px}
 .control-group{display:flex;align-items:center;gap:8px;padding:7px;border-radius:20px;border:1px solid rgba(255,255,255,0.08);background:linear-gradient(180deg,rgba(255,255,255,0.06),rgba(255,255,255,0.015)),rgba(20,15,17,0.44);box-shadow:inset 0 1px 0 rgba(255,255,255,0.06),0 10px 24px rgba(0,0,0,0.16);backdrop-filter:blur(20px)}
 .icon-button,.zoom-pill{appearance:none;border:1px solid rgba(255,255,255,0.1);border-radius:999px;background:linear-gradient(180deg,rgba(255,255,255,0.08),rgba(255,255,255,0.02)),rgba(17,13,15,0.42);color:var(--text);height:42px;min-width:42px;display:inline-flex;align-items:center;justify-content:center;padding:0 12px;cursor:pointer;opacity:.7;transition:opacity 180ms ease,transform 180ms ease,border-color 180ms ease,background 180ms ease;box-shadow:inset 0 1px 0 rgba(255,255,255,0.07),0 8px 18px rgba(0,0,0,0.14)}
@@ -121,7 +121,7 @@ body::after{background:radial-gradient(circle at center,transparent 54%,rgba(0,0
 .app-shell[data-ready="true"] .loading-state{opacity:0;visibility:hidden;transform:scale(1.02);pointer-events:none}
 .loading-cover{width:min(420px,68vw);aspect-ratio:16/9;border-radius:24px;background:rgba(255,255,255,0.04);background-position:center;background-repeat:no-repeat;background-size:cover;box-shadow:0 28px 54px rgba(0,0,0,0.24),inset 0 1px 0 rgba(255,255,255,0.16)}
 .loading-title{color:var(--text);font-size:clamp(18px,2vw,24px);font-weight:600;margin-top:12px}
-.statusbar{position:fixed;left:0;right:0;bottom:max(0px,env(safe-area-inset-bottom));z-index:2147483646;padding:calc(20px + env(safe-area-inset-bottom)) 24px 26px;display:flex;flex-direction:column;align-items:center;gap:14px;pointer-events:none;background:linear-gradient(to top,rgba(0,0,0,0.55),transparent 80%)}
+.statusbar{position:fixed;left:0;right:0;bottom:max(0px,env(safe-area-inset-bottom));z-index:2147483646;padding:calc(24px + env(safe-area-inset-bottom)) 24px 30px;display:flex;flex-direction:column;align-items:center;gap:16px;pointer-events:none;background:linear-gradient(to top,rgba(0,0,0,0.55),transparent 80%)}
 .nav-cluster{display:flex;align-items:center;gap:16px;pointer-events:auto}
 .nav-button{appearance:none;border:1px solid rgba(255,255,255,0.1);border-radius:999px;background:linear-gradient(180deg,rgba(255,255,255,0.08),rgba(255,255,255,0.02)),rgba(17,13,15,0.42);color:var(--text);height:42px;min-width:42px;display:inline-flex;align-items:center;justify-content:center;gap:6px;padding:0 16px;cursor:pointer;opacity:.8;transition:opacity 180ms ease,transform 180ms ease,border-color 180ms ease;box-shadow:inset 0 1px 0 rgba(255,255,255,0.07),0 8px 18px rgba(0,0,0,0.14);backdrop-filter:blur(16px)}
 .nav-button:hover,.nav-button:focus-visible{opacity:1;transform:translateY(-1px);border-color:rgba(255,225,208,0.32);outline:none}
@@ -224,10 +224,16 @@ function renderUI() {
           <button class="icon-button" id="btnZoomIn" type="button" aria-label="Aumentar zoom"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg></button>
         </div>
         <div class="control-group">
+          <button class="icon-button" id="btnPageSelector" type="button" aria-label="Selector de páginas" aria-expanded="false"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg></button>
+        </div>
+        <div class="control-group">
           <button class="icon-button" id="btnFullscreen" type="button" aria-label="Pantalla completa" aria-pressed="false"><svg viewBox="0 0 24 24"><path d="M8 4H4v4M16 4h4v4M20 16v4h-4M4 16v4h4"/></svg></button>
         </div>
       </div>
     </header>
+    <div id="pageSelectorPanel" style="display:none;position:fixed;top:calc(70px + env(safe-area-inset-top));left:50%;transform:translateX(-50%);z-index:2147483646;background:rgba(0,0,0,0.9);backdrop-filter:blur(20px);border-radius:16px;padding:16px;border:1px solid rgba(255,255,255,0.1);max-width:90vw;max-height:60vh;overflow-y:auto;">
+      <div id="pageSelectorGrid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(80px,1fr));gap:12px;"></div>
+    </div>
   `;
   
   setTimeout(() => {
@@ -235,6 +241,9 @@ function renderUI() {
     dom.btnZoomIn = document.getElementById('btnZoomIn');
     dom.btnZoomReset = document.getElementById('btnZoomReset');
     dom.btnFullscreen = document.getElementById('btnFullscreen');
+    dom.btnPageSelector = document.getElementById('btnPageSelector');
+    dom.pageSelectorPanel = document.getElementById('pageSelectorPanel');
+    dom.pageSelectorGrid = document.getElementById('pageSelectorGrid');
     
     if (dom.btnZoomOut && dom.btnZoomIn && dom.btnZoomReset && dom.btnFullscreen) {
       dom.btnZoomOut.addEventListener('click',()=>setZoom(state.userZoom-0.12));
@@ -242,7 +251,54 @@ function renderUI() {
       dom.btnZoomReset.addEventListener('click',()=>setZoom(1));
       dom.btnFullscreen.addEventListener('click',toggleFullscreen);
     }
+    
+    if (dom.btnPageSelector) {
+      dom.btnPageSelector.addEventListener('click', togglePageSelector);
+      renderPageSelector();
+    }
+    
+    document.addEventListener('click', (e) => {
+      if (dom.pageSelectorPanel && !dom.pageSelectorPanel.contains(e.target) && e.target !== dom.btnPageSelector) {
+        dom.pageSelectorPanel.style.display = 'none';
+        dom.btnPageSelector.setAttribute('aria-expanded', 'false');
+      }
+    });
   }, 0);
+}
+
+function togglePageSelector() {
+  if (!dom.pageSelectorPanel) return;
+  const isVisible = dom.pageSelectorPanel.style.display !== 'none';
+  dom.pageSelectorPanel.style.display = isVisible ? 'none' : 'block';
+  dom.btnPageSelector.setAttribute('aria-expanded', !isVisible);
+  if (!isVisible) renderPageSelector();
+}
+
+function renderPageSelector() {
+  if (!dom.pageSelectorGrid) return;
+  dom.pageSelectorGrid.innerHTML = '';
+  
+  PAGES.forEach((page, index) => {
+    const thumb = document.createElement('div');
+    thumb.style.cssText = 'position:relative;aspect-ratio:16/9;border-radius:8px;overflow:hidden;cursor:pointer;border:2px solid ' + 
+      (index === state.currentIndex ? 'var(--accent)' : 'rgba(255,255,255,0.2)') + 
+      ';transition:border-color 0.2s;';
+    thumb.innerHTML = `<img src="${page.src}" style="width:100%;height:100%;object-fit:cover;" alt="Página ${page.number}">` +
+      `<div style="position:absolute;bottom:2px;right:4px;background:rgba(0,0,0,0.7);color:white;font-size:10px;padding:2px 6px;border-radius:4px;">${page.number}</div>`;
+    thumb.addEventListener('click', () => {
+      if (state.bookState === 'closed' && index > 0) {
+        openBook('front');
+      }
+      state.currentIndex = index;
+      renderCurrentView();
+      updateUi(true);
+      dom.pageSelectorPanel.style.display = 'none';
+      dom.btnPageSelector.setAttribute('aria-expanded', 'false');
+    });
+    thumb.addEventListener('mouseenter', () => thumb.style.borderColor = 'var(--accent)');
+    thumb.addEventListener('mouseleave', () => thumb.style.borderColor = index === state.currentIndex ? 'var(--accent)' : 'rgba(255,255,255,0.2)');
+    dom.pageSelectorGrid.appendChild(thumb);
+  });
 }
 
 renderUI();
@@ -906,8 +962,8 @@ function calculateScale(){
   const vw=window.innerWidth,vh=window.innerHeight;
   const shellWidth=state.layout==='spread'?SETTINGS.pageWidth+(SETTINGS.pageWidth+SETTINGS.spreadGap)*state.openProgress:SETTINGS.pageWidth;
   const bookHeight=SETTINGS.pageHeight;
-  const topBarHeight=80;
-  const bottomBarHeight=160;
+  const topBarHeight=100;
+  const bottomBarHeight=180;
   const availableHeight=vh-topBarHeight-bottomBarHeight;
   const autoScale=Math.min(vw/Math.max(1,shellWidth),availableHeight/bookHeight)*SETTINGS.stageMargin;
   dom.app.style.setProperty('--frame-scale',clamp(autoScale*state.userZoom,0.18,3.2).toFixed(5));
