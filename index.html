@@ -117,8 +117,8 @@ body::after{background:radial-gradient(circle at center,transparent 54%,rgba(0,0
 .corner-hit.prev.bottom{left:-18px;bottom:-8px}
 .corner-hit.next.top{right:-18px;top:-8px}
 .corner-hit.next.bottom{right:-18px;bottom:-8px}
-.loading-state{position:absolute;inset:0;z-index:200;display:grid;place-content:center;gap:18px;padding:24px;background:linear-gradient(180deg,rgba(11,8,9,0.72),rgba(11,8,9,0.92)),radial-gradient(520px 260px at 50% 28%,rgba(255,216,193,0.12),transparent 72%);text-align:center;transition:opacity 320ms ease,visibility 320ms ease,transform 320ms ease}
-.app-shell[data-ready="true"] .loading-state{opacity:0;visibility:hidden;transform:scale(1.02);pointer-events:none}
+.loading-state{position:absolute;inset:0;z-index:200;display:grid;place-content:center;gap:18px;padding:24px;background:linear-gradient(180deg,rgba(11,8,9,0.72),rgba(11,8,9,0.92)),radial-gradient(520px 260px at 50% 28%,rgba(255,216,193,0.12),transparent 72%);text-align:center;transition:opacity 320ms ease,visibility 320ms ease,transform 320ms ease;pointer-events:none}
+.app-shell[data-ready="true"] .loading-state{opacity:0;visibility:hidden;transform:scale(1.02)}
 .loading-cover{width:min(420px,68vw);aspect-ratio:16/9;border-radius:24px;background:rgba(255,255,255,0.04);background-position:center;background-repeat:no-repeat;background-size:cover;box-shadow:0 28px 54px rgba(0,0,0,0.24),inset 0 1px 0 rgba(255,255,255,0.16)}
 .loading-title{color:var(--text);font-size:clamp(18px,2vw,24px);font-weight:600;margin-top:12px}
 .statusbar{position:fixed;left:0;right:0;bottom:max(0px,env(safe-area-inset-bottom));z-index:2147483646;padding:calc(24px + env(safe-area-inset-bottom)) 24px 30px;display:flex;flex-direction:column;align-items:center;gap:16px;pointer-events:none;background:linear-gradient(to top,rgba(0,0,0,0.55),transparent 80%)}
