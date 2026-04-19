@@ -1,4 +1,4 @@
 ```
 # Backup files
-*.backup
+*.backup*
 ```
