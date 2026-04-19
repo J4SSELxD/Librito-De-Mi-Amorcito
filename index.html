@@ -524,25 +524,17 @@ function prepareBufferLayer(direction,targetIndex){
 
 // ATOMIC SWAP: Execute layer swap in single frame - NO visual glitch
 function performAtomicSwap(direction,targetIndex){
-  // Step 1: Get new views for active layer
+  // Step 1: Get new views for active layer (next spread after turn completes)
   const fv=getView(targetIndex),fb=getStaticBackPages(targetIndex);
   
-  // Step 2: Update textures on buffer layer (underSpread) BEFORE making it visible
-  // This ensures the new content is ready before we show it
-  setSheetTextures(dom.underLeftFront,dom.underLeftBack,fv.left,fb.leftBack);
-  setSheetTextures(dom.underRightFront,dom.underRightBack,fv.right,fb.rightBack);
-  
-  // Step 3: Clear OLD active layer textures BEFORE hiding it (prevents flash)
-  setSheetTextures(dom.currentLeftFront,dom.currentLeftBack,null,null);
-  setSheetTextures(dom.currentRightFront,dom.currentRightBack,null,null);
-  
-  // Step 4: ATOMIC swap - hide old active, show buffer as new active (same RAF)
+  // Step 2: ATOMIC swap - hide old active, show buffer as new active (SAME RAF, NO gap)
+  // Buffer layer already has correct content from prepareBufferLayer()
   dom.currentSpread.classList.remove('active-layer');
   dom.currentSpread.classList.add('buffer-layer');
   dom.underSpread.classList.remove('buffer-layer');
   dom.underSpread.classList.add('active-layer');
   
-  // Step 5: Swap DOM references so future updates go to correct layers
+  // Step 3: Swap DOM references so future updates go to correct layers
   const tempSpread = dom.currentSpread;
   dom.currentSpread = dom.underSpread;
   dom.underSpread = tempSpread;
@@ -562,6 +554,15 @@ function performAtomicSwap(direction,targetIndex){
   const tempRightBack = dom.currentRightBack;
   dom.currentRightBack = dom.underRightBack;
   dom.underRightBack = tempRightBack;
+  
+  // Step 4: Update textures on NEW active layer (formerly buffer, now visible)
+  // This happens AFTER swap, so user sees the new content immediately
+  setSheetTextures(dom.currentLeftFront,dom.currentLeftBack,fv.left,fb.leftBack);
+  setSheetTextures(dom.currentRightFront,dom.currentRightBack,fv.right,fb.rightBack);
+  
+  // Step 5: Clear OLD buffer layer textures (now hidden, prevents stale data)
+  setSheetTextures(dom.underLeftFront,dom.underLeftBack,null,null);
+  setSheetTextures(dom.underRightFront,dom.underRightBack,null,null);
   
   // Step 6: Reset state
   state.currentIndex=targetIndex;
