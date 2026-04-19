@@ -398,6 +398,10 @@ const state={
 let tiltFrame=0;
 let dom=null;
 
+// FORCE INITIAL STATE: Ensure animating is false before any interaction
+state.animating=false;
+state.bookState='loading';
+
 function initDOM(){
   return {
     app:document.getElementById('app'),loadingState:document.getElementById('loadingState'),
@@ -436,6 +440,7 @@ function bootstrap(){
   applyStaticMetrics();
   
   requestAnimationFrame(()=>{
+    state.animating=false;
     state.bookState='closed';
     dom.app.dataset.ready='true';
     dom.app.dataset.bookState='closed';
@@ -526,7 +531,9 @@ function renderCurrentView(){
 }
 
 async function openBook(targetIndex=1){
-  if(state.animating||state.bookState==='open'||state.bookState==='opening'||state.pages.length<2)return;
+  if(state.bookState==='open'||state.bookState==='opening')return;
+  if(state.pages.length<2)return;
+  state.animating=false;
   state.currentIndex=normalizeIndex(targetIndex);
   state.animating=true;state.bookState='opening';
   dom.app.dataset.bookState='opening';
@@ -538,7 +545,8 @@ async function openBook(targetIndex=1){
   renderCurrentView();updateUi(true);
 }
 async function closeBook(){
-  if(state.animating||state.bookState!=='open')return;
+  if(state.bookState!=='open')return;
+  state.animating=false;
   state.animating=true;state.bookState='closing';
   dom.app.dataset.bookState='closing';
   setTexture(dom.coverPage,getClosedPage());
@@ -560,7 +568,8 @@ async function goForward(){if(state.bookState==='closed'){await openBook(1);retu
 async function goBackward(){if(state.bookState==='closed'){await closeBook();return;}if(state.bookState!=='open')return;if(state.currentIndex<=1){await closeBook();return;}await turn(-1);}
 
 async function turn(direction){
-  if(state.animating||state.bookState!=='open')return;
+  if(state.bookState!=='open')return;
+  state.animating=false;
   const step=getStep();
   const targetIndex=normalizeIndex(state.currentIndex+direction*step);
   if(direction>0&&state.currentIndex>=getLastOpenIndex()){await closeBook();return;}
@@ -763,7 +772,9 @@ function resetTurnVisuals(){
 }
 
 function onPointerDown(e){
-  if(state.animating||state.bookState!=='open'||e.button!==0)return;
+  if(state.bookState!=='open')return;
+  state.animating=false;
+  if(e.button!==0)return;
   const rect=dom.bookRoot.getBoundingClientRect();
   if(e.clientX<rect.left||e.clientX>rect.right||e.clientY<rect.top||e.clientY>rect.bottom)return;
   const edgeThreshold=rect.width*0.35;
