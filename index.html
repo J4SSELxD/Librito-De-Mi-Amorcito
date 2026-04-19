@@ -129,7 +129,7 @@ body::after{background:radial-gradient(circle at center,transparent 54%,rgba(0,0
 #progressFill{display:block;height:100%;background:var(--accent);border-radius:999px;transition:width 400ms ease}
 .hint{font-size:11px;color:var(--muted);letter-spacing:.04em}
 .noscript-card{position:fixed;inset:0;display:grid;place-items:center;padding:24px;background:rgba(0,0,0,0.88);color:white;font-size:18px;text-align:center;z-index:999}
-@media (max-width:960px),(orientation:portrait){:root{--page-radius:20px}.topbar{right:14px;bottom:14px}.control-group{padding:6px;gap:6px}.statusbar{padding:8px 16px 14px}.app-shell[data-layout="single"] .spread,.app-shell[data-layout="single"] .spread-book{width:var(--page-width)}.app-shell[data-layout="single"] .spread{grid-template-columns:1fr;gap:0}.app-shell[data-layout="single"] .page-left,.app-shell[data-layout="single"] .page-sheet.page-left,.app-shell[data-layout="single"] .stack-left,.app-shell[data-layout="single"] .stack-right,.app-shell[data-layout="single"] .spine-shadow,.app-shell[data-layout="single"] .spine-highlight{display:none}.app-shell[data-layout="single"] .cover-wrapper,.app-shell[data-layout="single"] .peel{left:0;right:auto;width:var(--page-width)}.app-shell[data-layout="single"] .peel-next,.app-shell[data-layout="single"] .peel-prev{left:0}.app-shell[data-layout="single"] .corner-hit.prev.top,.app-shell[data-layout="single"] .corner-hit.prev.bottom{left:-10px}.app-shell[data-layout="single"] .corner-hit.next.top,.app-shell[data-layout="single"] .corner-hit.next.bottom{right:-10px}}
+@media (max-width:960px),(orientation:portrait){:root{--page-radius:20px}.topbar{right:14px;bottom:14px}.control-group{padding:6px;gap:6px}.statusbar{padding:8px 16px 14px}}
 @media (max-width:640px){.topbar{bottom:8px;right:8px}.control-strip{gap:8px}.control-group{padding:5px}.icon-button,.zoom-pill{height:40px;min-width:40px}.statusbar{padding:6px 12px 10px}.nav-button span{display:none}}
 @media (prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;transition-duration:.01ms!important}}
   </style>
@@ -368,33 +368,32 @@ function bindEvents(){
 }
 
 function syncLayout(forceReset){
-  const nextLayout=compactLayout()?'single':'spread';
-  state.layout=nextLayout;
-  dom.app.dataset.layout=nextLayout;
+  // ALWAYS use spread layout - NO single page mode on mobile
+  state.layout='spread';
+  dom.app.dataset.layout='spread';
   if(forceReset)state.userZoom=clamp(state.userZoom,SETTINGS.minZoom,SETTINGS.maxZoom);
   if(state.bookState==='open')state.currentIndex=normalizeIndex(state.currentIndex);
   applyStaticMetrics();
 }
-function compactLayout(){const w=window.innerWidth,h=window.innerHeight;return h>w*1.02||(window.matchMedia('(pointer:coarse)').matches&&w<1280)||w<760;}
+function compactLayout(){return false;}
 function applyStaticMetrics(){
   dom.app.style.setProperty('--page-width',`${SETTINGS.pageWidth}px`);
   dom.app.style.setProperty('--page-height',`${SETTINGS.pageHeight}px`);
   dom.app.style.setProperty('--page-gap',`${SETTINGS.spreadGap}px`);
   dom.app.style.setProperty('--spread-width',`${SETTINGS.pageWidth*2+SETTINGS.spreadGap}px`);
 }
-function getStep(){return state.layout==='single'?1:2;}
-function getLastOpenIndex(){if(state.layout==='single')return Math.max(1,state.pages.length-1);const last=Math.max(1,state.pages.length-1);return last%2!==0?last:last-1;}
-function resolvePage(index){if(index<0)return null;if(index<state.pages.length)return state.pages[index]||null;if(state.layout==='spread'&&state.backCover&&index===state.pages.length)return state.backCover;return null;}
+function getStep(){return 2;}
+function getLastOpenIndex(){const last=Math.max(1,state.pages.length-1);return last%2!==0?last:last-1;}
+function resolvePage(index){if(index<0)return null;if(index<state.pages.length)return state.pages[index]||null;if(state.backCover&&index===state.pages.length)return state.backCover;return null;}
 function getClosedPage(){return state.closedFace==='back'?state.backCover:state.pages[0]||null;}
 function getView(index=state.currentIndex){
-  if(state.layout==='single'){const page=resolvePage(index);return{left:null,right:page,label:page?page.label:'Página vacía',pill:page?`${String(page.number||index+1).padStart(2,'0')}`:'---',progressPage:page?.number||1};}
   const left=resolvePage(index),right=resolvePage(index+1);
   const ll=left?.number?String(left.number).padStart(2,'0'):'---';
   const rl=right?.role==='back-cover'?'BC':right?.number?String(right.number).padStart(2,'0'):'---';
   return{left,right,label:left&&right?`${left.label} y ${right.label}`:left?left.label:right?right.label:'Vista vacía',pill:`${ll}-${rl}`,progressPage:right?.number||left?.number||1};
 }
-function getStaticBackPages(index=state.currentIndex){if(state.layout==='single')return{leftBack:null,rightBack:resolvePage(index+1)};return{leftBack:resolvePage(index-1),rightBack:resolvePage(index+2)};}
-function normalizeIndex(index){const max=getLastOpenIndex();if(state.layout==='single')return clamp(index,1,max);let n=Math.max(1,index);if(n%2===0)n-=1;return clamp(n,1,max);}
+function getStaticBackPages(index=state.currentIndex){return{leftBack:resolvePage(index-1),rightBack:resolvePage(index+2)};}
+function normalizeIndex(index){const max=getLastOpenIndex();let n=Math.max(1,index);if(n%2===0)n-=1;return clamp(n,1,max);}
 
 function renderCurrentView(){
   const key=[state.bookState,state.layout,state.currentIndex,state.closedFace,state.pages.length].join(':');
@@ -477,34 +476,22 @@ async function turn(direction){
 }
 
 function prepareTurn(direction,fromView,toView){
-  if(state.layout==='single'){
-    // In single mode, hide the original page in active layer during turn
-    dom.currentSpread.style.opacity='0';
-    dom.currentSpread.style.visibility='hidden';
+  // ALWAYS use spread mode logic - NO single page mode
+  // Hide ONLY the page that is turning
+  // direction>0: right page turns → hide only right page, keep left visible
+  // direction<0: left page turns → hide only left page, keep right visible
+  if(direction>0){
+    // Hiding right page only - left stays visible
+    dom.currentRightFront.style.opacity='0';
+    dom.currentRightBack.style.opacity='0';
   }else{
-    // In spread mode: hide ONLY the page that is turning
-    // direction>0: right page turns → hide only right page, keep left visible
-    // direction<0: left page turns → hide only left page, keep right visible
-    if(direction>0){
-      // Hiding right page only - left stays visible
-      dom.currentRightFront.style.opacity='0';
-      dom.currentRightBack.style.opacity='0';
-    }else{
-      // Hiding left page only - right stays visible
-      dom.currentLeftFront.style.opacity='0';
-      dom.currentLeftBack.style.opacity='0';
-    }
+    // Hiding left page only - right stays visible
+    dom.currentLeftFront.style.opacity='0';
+    dom.currentLeftBack.style.opacity='0';
   }
   resetTurnVisuals();
   const targetIndex=normalizeIndex(state.currentIndex+direction*getStep());
   const fromBacks=getStaticBackPages(state.currentIndex),toBacks=getStaticBackPages(targetIndex);
-  if(state.layout==='single'){
-    // In single mode, buffer layer already prepared by prepareBufferLayer
-    // turnLayer (peel) shows the page that is turning
-    if(direction>0){setTexture(dom.peelNextFront,fromView.right);setTexture(dom.peelNextBack,toView.right);dom.peelNext.classList.add('active');dom.peelNext.style.zIndex='90';dom.peelNext.style.transformOrigin='left center';dom.peelNextSheet.style.transformOrigin='left center';}
-    else{setTexture(dom.peelPrevFront,fromView.right);setTexture(dom.peelPrevBack,toView.right);dom.peelPrev.classList.add('active');dom.peelPrev.style.zIndex='90';dom.peelPrev.style.transformOrigin='right center';dom.peelPrevSheet.style.transformOrigin='right center';}
-    return;
-  }
   if(direction>0){
     // Turn right: peel Next (right page turns to left)
     // CRITICAL FIX: Hide the turning page (right) on activeLayer BEFORE showing peel
@@ -528,20 +515,16 @@ function prepareTurn(direction,fromView,toView){
 // DOUBLE BUFFER: Prepare buffer layer with next content (stays hidden until swap)
 function prepareBufferLayer(direction,targetIndex){
   const toView=getView(targetIndex),toBacks=getStaticBackPages(targetIndex);
-  if(state.layout==='single'){
-    setSheetTextures(dom.underLeftFront,dom.underLeftBack,null,null);
+  // ALWAYS use spread mode logic - NO single page mode
+  if(direction>0){
+    // Going forward: buffer gets the NEXT spread (toView.left on left, toView.right on right... but wait)
+    // After turning right: we see toView.left (which was behind) and toView.right (new page)
+    setSheetTextures(dom.underLeftFront,dom.underLeftBack,toView.left,toBacks.leftBack);
     setSheetTextures(dom.underRightFront,dom.underRightBack,toView.right,toBacks.rightBack);
   }else{
-    if(direction>0){
-      // Going forward: buffer gets the NEXT spread (toView.left on left, toView.right on right... but wait)
-      // After turning right: we see toView.left (which was behind) and toView.right (new page)
-      setSheetTextures(dom.underLeftFront,dom.underLeftBack,toView.left,toBacks.leftBack);
-      setSheetTextures(dom.underRightFront,dom.underRightBack,toView.right,toBacks.rightBack);
-    }else{
-      // Going backward: buffer gets the PREVIOUS spread
-      setSheetTextures(dom.underLeftFront,dom.underLeftBack,toView.left,toBacks.leftBack);
-      setSheetTextures(dom.underRightFront,dom.underRightBack,toView.right,toBacks.rightBack);
-    }
+    // Going backward: buffer gets the PREVIOUS spread
+    setSheetTextures(dom.underLeftFront,dom.underLeftBack,toView.left,toBacks.leftBack);
+    setSheetTextures(dom.underRightFront,dom.underRightBack,toView.right,toBacks.rightBack);
   }
   // Buffer layer stays HIDDEN (opacity:0, visibility:hidden via CSS class .buffer-layer)
 }
@@ -561,16 +544,14 @@ function performAtomicSwap(direction,targetIndex){
   
   // Step 2: Restore opacity on pages that were hidden during turn (before swap)
   // This ensures smooth transition without sudden appearance
-  if(state.layout!=='single'){
-    if(direction>0){
-      // Right page was turning: restore right page opacity on old currentSpread
-      dom.currentRightFront.style.opacity='1';
-      dom.currentRightBack.style.opacity='1';
-    }else{
-      // Left page was turning: restore left page opacity on old currentSpread
-      dom.currentLeftFront.style.opacity='1';
-      dom.currentLeftBack.style.opacity='1';
-    }
+  if(direction>0){
+    // Right page was turning: restore right page opacity on old currentSpread
+    dom.currentRightFront.style.opacity='1';
+    dom.currentRightBack.style.opacity='1';
+  }else{
+    // Left page was turning: restore left page opacity on old currentSpread
+    dom.currentLeftFront.style.opacity='1';
+    dom.currentLeftBack.style.opacity='1';
   }
   
   // Step 3: ATOMIC swap - hide old active, show buffer as new active (SAME RAF, NO gap)
