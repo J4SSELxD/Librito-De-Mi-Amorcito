@@ -429,12 +429,13 @@ dom.loadingCover.style.backgroundImage=`url("${pagesData[0].src}")`;
 bindEvents();
 syncLayout(true);
 applyStaticMetrics();
-applyOpenState(0,'front');
+// NO applyOpenState here - let openBook() handle initial state
 
 requestAnimationFrame(()=>{
   state.bookState='closed';
   dom.app.dataset.ready='true';
   dom.app.dataset.bookState='closed';
+  applyOpenState(0,'front'); // Apply AFTER state is set
   renderCurrentView();
   updateUi(true);
   calculateScale();
