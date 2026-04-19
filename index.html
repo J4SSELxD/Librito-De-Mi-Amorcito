@@ -482,9 +482,18 @@ function prepareTurn(direction,fromView,toView){
     dom.currentSpread.style.opacity='0';
     dom.currentSpread.style.visibility='hidden';
   }else{
-    // In spread mode, hide ONLY the page that is turning (right for next, left for prev)
-    dom.currentSpread.style.opacity='0';
-    dom.currentSpread.style.visibility='hidden';
+    // In spread mode: hide ONLY the page that is turning
+    // direction>0: right page turns → hide only right page, keep left visible
+    // direction<0: left page turns → hide only left page, keep right visible
+    if(direction>0){
+      // Hiding right page only - left stays visible
+      dom.currentRightFront.style.opacity='0';
+      dom.currentRightBack.style.opacity='0';
+    }else{
+      // Hiding left page only - right stays visible
+      dom.currentLeftFront.style.opacity='0';
+      dom.currentLeftBack.style.opacity='0';
+    }
   }
   resetTurnVisuals();
   const targetIndex=normalizeIndex(state.currentIndex+direction*getStep());
@@ -545,7 +554,21 @@ function performAtomicSwap(direction,targetIndex){
   // Force style recalc to ensure textures are applied before visibility change
   void dom.underLeftFront.offsetWidth;
   
-  // Step 2: ATOMIC swap - hide old active, show buffer as new active (SAME RAF, NO gap)
+  // Step 2: Restore opacity on pages that were hidden during turn (before swap)
+  // This ensures smooth transition without sudden appearance
+  if(state.layout!=='single'){
+    if(direction>0){
+      // Right page was turning: restore right page opacity on old currentSpread
+      dom.currentRightFront.style.opacity='1';
+      dom.currentRightBack.style.opacity='1';
+    }else{
+      // Left page was turning: restore left page opacity on old currentSpread
+      dom.currentLeftFront.style.opacity='1';
+      dom.currentLeftBack.style.opacity='1';
+    }
+  }
+  
+  // Step 3: ATOMIC swap - hide old active, show buffer as new active (SAME RAF, NO gap)
   // Buffer layer already has correct content from prepareBufferLayer()
   dom.currentSpread.classList.remove('active-layer');
   dom.currentSpread.classList.add('buffer-layer');
