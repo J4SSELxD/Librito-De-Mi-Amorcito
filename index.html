@@ -518,7 +518,7 @@ function renderCurrentView(){
 }
 
 async function openBook(targetIndex=1){
-  if(state.animating||state.bookState==='open'||state.pages.length<2)return;
+  if(state.animating||state.bookState==='open'||state.bookState==='opening'||state.pages.length<2)return;
   state.currentIndex=normalizeIndex(targetIndex);
   state.animating=true;state.bookState='opening';
   dom.app.dataset.bookState='opening';
