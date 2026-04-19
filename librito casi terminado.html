@@ -406,6 +406,11 @@
       z-index: 10;
     }
 
+    .app-viewer.is-zoomed {
+      overflow: auto;
+      touch-action: pan-x pan-y;
+    }
+
     .viewer-stage {
       position: relative;
       width: 100%;
@@ -804,6 +809,91 @@
         animation: none !important;
         transition-duration: 0.01ms !important;
         scroll-behavior: auto !important;
+      }
+    }
+
+    @media (orientation: landscape) and (max-height: 500px) {
+      :root {
+        --header-h: 36px;
+        --footer-h: 36px;
+      }
+
+      .app-header {
+        padding-top: max(4px, var(--safe-top));
+      }
+
+      .app-footer {
+        padding-bottom: max(4px, var(--safe-bottom));
+      }
+
+      .toolbar,
+      .footer-bar {
+        min-height: 36px;
+        padding: 4px 10px;
+        border-radius: 18px;
+      }
+
+      .control-button {
+        min-width: 36px;
+        height: 36px;
+        padding: 0 10px;
+      }
+
+      .control-button svg {
+        width: 16px;
+        height: 16px;
+      }
+
+      .page-chip {
+        min-width: 64px;
+        padding: 0 10px;
+        font-size: 11px;
+      }
+
+      .status-text {
+        font-size: 10px;
+      }
+
+      .progress-track {
+        height: 2px;
+      }
+
+      .nav-button-prev,
+      .nav-button-next {
+        position: fixed;
+        top: 50%;
+        transform: translateY(-50%);
+        z-index: 95;
+        opacity: 0.7;
+        transition: opacity 200ms ease;
+      }
+
+      .nav-button-prev:hover,
+      .nav-button-next:hover,
+      .nav-button-prev:active,
+      .nav-button-next:active {
+        opacity: 1;
+      }
+
+      .nav-button-prev {
+        left: 8px;
+      }
+
+      .nav-button-next {
+        right: 8px;
+      }
+
+      .app-viewer {
+        inset:
+          calc(max(4px, var(--safe-top)) + 36px + 8px)
+          0
+          calc(max(4px, var(--safe-bottom)) + 36px + 8px)
+          0;
+        min-height: 80vh;
+      }
+
+      .footer-bar .control-group:not(:has(.nav-button-prev):not(:has(.nav-button-next))) {
+        display: none;
       }
     }
   </style>
@@ -1414,6 +1504,10 @@ const PAGES = [
       scheduleRender();
     }
 
+    let lastTapTime = 0;
+    let lastTapX = 0;
+    let lastTapY = 0;
+
     function onAppClick(event) {
       const actionTarget = event.target.closest('[data-action]');
       if (actionTarget) {
@@ -1426,6 +1520,30 @@ const PAGES = [
       if (!event.target.closest('#bookRoot')) {
         return;
       }
+      
+      const now = performance.now();
+      const isDoubleTap = (now - lastTapTime) < 300 && 
+                          Math.abs(event.clientX - lastTapX) < 50 && 
+                          Math.abs(event.clientY - lastTapY) < 50;
+      
+      if (isDoubleTap) {
+        lastTapTime = 0;
+        const fullscreenOn = Boolean(document.fullscreenElement) || state.pseudoFullscreen;
+        if (fullscreenOn) {
+          const currentZoom = state.zoom;
+          if (currentZoom > 1) {
+            setZoom(1, event.clientX, event.clientY);
+          } else {
+            setZoom(2, event.clientX, event.clientY);
+          }
+        }
+        return;
+      }
+      
+      lastTapTime = now;
+      lastTapX = event.clientX;
+      lastTapY = event.clientY;
+      
       const fullscreenOn = Boolean(document.fullscreenElement) || state.pseudoFullscreen;
       if (fullscreenOn) {
         toggleControls();
@@ -1513,11 +1631,32 @@ const PAGES = [
       scheduleRender();
     }
 
-    function setZoom(nextZoom) {
+    function setZoom(nextZoom, centerX, centerY) {
       const zoom = clamp(nextZoom, SETTINGS.minZoom, SETTINGS.maxZoom);
       if (Math.abs(zoom - state.zoom) < 0.001) {
         return;
       }
+      
+      if (zoom > 1 && !dom.viewer.classList.contains('is-zoomed')) {
+        dom.viewer.classList.add('is-zoomed');
+      } else if (zoom <= 1) {
+        dom.viewer.classList.remove('is-zoomed');
+      }
+      
+      if (centerX !== undefined && centerY !== undefined) {
+        const rect = dom.bookRoot.getBoundingClientRect();
+        const bookCenterX = rect.left + rect.width / 2;
+        const bookCenterY = rect.top + rect.height / 2;
+        
+        const normalizedX = (centerX - bookCenterX) / (rect.width / 2);
+        const normalizedY = (centerY - bookCenterY) / (rect.height / 2);
+        
+        const originX = 50 + normalizedX * 50;
+        const originY = 50 + normalizedY * 50;
+        
+        dom.bookRoot.style.transformOrigin = `${clamp(originX, 0, 100)}% ${clamp(originY, 0, 100)}%`;
+      }
+      
       state.zoom = zoom;
       scheduleRender();
     }
@@ -1631,7 +1770,7 @@ const PAGES = [
       }
       event.preventDefault();
       const delta = event.deltaY > 0 ? -SETTINGS.zoomStep * 0.55 : SETTINGS.zoomStep * 0.55;
-      setZoom(state.zoom + delta);
+      setZoom(state.zoom + delta, event.clientX, event.clientY);
     }
 
     function onPointerDown(event) {
@@ -1822,6 +1961,21 @@ const PAGES = [
       }
       const points = Array.from(state.pointers.values());
       if (!state.pinch) {
+        const rect = dom.bookRoot.getBoundingClientRect();
+        const centerX = (points[0].x + points[1].x) / 2;
+        const centerY = (points[0].y + points[1].y) / 2;
+        
+        const bookCenterX = rect.left + rect.width / 2;
+        const bookCenterY = rect.top + rect.height / 2;
+        
+        const normalizedX = (centerX - bookCenterX) / (rect.width / 2);
+        const normalizedY = (centerY - bookCenterY) / (rect.height / 2);
+        
+        const originX = 50 + normalizedX * 50;
+        const originY = 50 + normalizedY * 50;
+        
+        dom.bookRoot.style.transformOrigin = `${clamp(originX, 0, 100)}% ${clamp(originY, 0, 100)}%`;
+        
         state.pinch = {
           startDistance: getDistance(points[0], points[1]),
           startZoom: state.zoom,
