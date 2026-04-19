@@ -440,8 +440,11 @@ async function closeBook(face='front'){
   dom.app.dataset.bookState='closed';applyOpenState(0,face);
   requestAnimationFrame(()=>{
     resetTurnVisuals();
+    // Clear both layers to prevent visual artifacts
     setSheetTextures(dom.currentLeftFront,dom.currentLeftBack,null,null);
     setSheetTextures(dom.currentRightFront,dom.currentRightBack,null,null);
+    setSheetTextures(dom.underLeftFront,dom.underLeftBack,null,null);
+    setSheetTextures(dom.underRightFront,dom.underRightBack,null,null);
     state.lastRenderedKey='';renderCurrentView();updateUi(true);calculateScale();
   });
 }
@@ -524,27 +527,49 @@ function performAtomicSwap(direction,targetIndex){
   // Step 1: Get new views for active layer
   const fv=getView(targetIndex),fb=getStaticBackPages(targetIndex);
   
-  // Step 2: ATOMIC swap - hide old active, show buffer as new active (same RAF)
+  // Step 2: Update textures on buffer layer (underSpread) BEFORE making it visible
+  // This ensures the new content is ready before we show it
+  setSheetTextures(dom.underLeftFront,dom.underLeftBack,fv.left,fb.leftBack);
+  setSheetTextures(dom.underRightFront,dom.underRightBack,fv.right,fb.rightBack);
+  
+  // Step 3: Clear OLD active layer textures BEFORE hiding it (prevents flash)
+  setSheetTextures(dom.currentLeftFront,dom.currentLeftBack,null,null);
+  setSheetTextures(dom.currentRightFront,dom.currentRightBack,null,null);
+  
+  // Step 4: ATOMIC swap - hide old active, show buffer as new active (same RAF)
   dom.currentSpread.classList.remove('active-layer');
   dom.currentSpread.classList.add('buffer-layer');
   dom.underSpread.classList.remove('buffer-layer');
   dom.underSpread.classList.add('active-layer');
   
-  // Step 3: Update textures on NEW active layer (formerly buffer)
-  setSheetTextures(dom.currentLeftFront,dom.currentLeftBack,fv.left,fb.leftBack);
-  setSheetTextures(dom.currentRightFront,dom.currentRightBack,fv.right,fb.rightBack);
+  // Step 5: Swap DOM references so future updates go to correct layers
+  const tempSpread = dom.currentSpread;
+  dom.currentSpread = dom.underSpread;
+  dom.underSpread = tempSpread;
   
-  // Step 4: Clear OLD buffer layer (formerly active) - now becomes new buffer
-  setSheetTextures(dom.underLeftFront,dom.underLeftBack,null,null);
-  setSheetTextures(dom.underRightFront,dom.underRightBack,null,null);
+  const tempLeftFront = dom.currentLeftFront;
+  dom.currentLeftFront = dom.underLeftFront;
+  dom.underLeftFront = tempLeftFront;
   
-  // Step 5: Reset state
+  const tempLeftBack = dom.currentLeftBack;
+  dom.currentLeftBack = dom.underLeftBack;
+  dom.underLeftBack = tempLeftBack;
+  
+  const tempRightFront = dom.currentRightFront;
+  dom.currentRightFront = dom.underRightFront;
+  dom.underRightFront = tempRightFront;
+  
+  const tempRightBack = dom.currentRightBack;
+  dom.currentRightBack = dom.underRightBack;
+  dom.underRightBack = tempRightBack;
+  
+  // Step 6: Reset state
   state.currentIndex=targetIndex;
   state.animating=false;
   dom.app.dataset.turning='false';
   state.lastRenderedKey=[state.bookState,state.layout,state.currentIndex,state.closedFace,state.pages.length].join(':');
   
-  // Step 6: Cleanup turn layer visuals
+  // Step 7: Cleanup turn layer visuals
   resetTurnVisuals();
   updateUi(true);
 }
@@ -652,23 +677,43 @@ function onDragEnd(e){
   else snapBackDrag(direction,progress);
 }
 async function completeDragTurn(direction,fromProgress){
+  if(state.animating)return; // Guard: prevent re-entry
   state.animating=true;
+  
+  // Prepare buffer layer BEFORE animation completes
+  prepareBufferLayer(direction,state.drag.targetIndex);
+  
   const remaining=1-fromProgress;
   const duration=SETTINGS.turnDuration*remaining*0.4;
   await animateValue({duration,onUpdate:(r)=>{const currentProgress=fromProgress+remaining*r;const phased=phaseCurve(currentProgress);applyTurn(direction,phased);}});
   
-  // ATOMIC SWAP using double buffer system
+  // ATOMIC SWAP using double buffer system (same frame)
   requestAnimationFrame(()=>{
-    performAtomicSwap(direction,state.drag.targetIndex);
+    try {
+      performAtomicSwap(direction,state.drag.targetIndex);
+    } catch(err) {
+      console.error('Error in atomic swap:', err);
+      state.animating=false;
+      dom.app.dataset.turning='false';
+      resetTurnVisuals();
+      updateUi(true);
+    }
   });
 }
 async function snapBackDrag(direction,fromProgress){
+  if(state.animating)return; // Guard: prevent re-entry
   state.animating=true;
   await animateValue({duration:SETTINGS.turnDuration*0.25,onUpdate:(r)=>{const currentProgress=fromProgress*(1-r);const phased=phaseCurve(currentProgress);applyTurn(direction,phased);}});
-  state.animating=false;dom.app.dataset.turning='false';
-  resetTurnVisuals();updateUi(true);
+  state.animating=false;
+  dom.app.dataset.turning='false';
+  resetTurnVisuals();
+  updateUi(true);
 }
-function endDrag(){state.drag.active=false;dom.app.dataset.turning='false';resetTurnVisuals();}
+function endDrag(){
+  state.drag.active=false;
+  dom.app.dataset.turning='false';
+  resetTurnVisuals();
+}
 function onTouchStart(e){
   if(e.touches.length===2){state.pinch={distance:getTouchDist(e.touches),zoom:state.userZoom};return;}
   if(e.touches.length!==1||state.animating)return;
