@@ -686,7 +686,10 @@ function onPointerDown(e){
   const direction=fromRight?1:-1;
   if(direction>0&&state.currentIndex>=getLastOpenIndex())return;
   if(direction<0&&state.currentIndex<=1)return;
-  state.drag={active:true,direction,startX:e.clientX,currentProgress:0,targetIndex:normalizeIndex(state.currentIndex+direction*getStep())};
+  const targetIndex=normalizeIndex(state.currentIndex+direction*getStep());
+  // CRITICAL FIX: Prepare buffer layer IMMEDIATELY on drag start (before any hiding)
+  prepareBufferLayer(direction,targetIndex);
+  state.drag={active:true,direction,startX:e.clientX,currentProgress:0,targetIndex:targetIndex};
   dom.stageViewport.setPointerCapture(e.pointerId);
   dom.stageViewport.addEventListener('pointermove',onDragMove);
   dom.stageViewport.addEventListener('pointerup',onDragEnd);
@@ -725,8 +728,7 @@ async function completeDragTurn(direction,fromProgress){
   if(state.animating)return; // Guard: prevent re-entry
   state.animating=true;
   
-  // Prepare buffer layer BEFORE animation completes
-  prepareBufferLayer(direction,state.drag.targetIndex);
+  // Buffer layer already prepared on drag start (line 691), no need to prepare again
   
   const remaining=1-fromProgress;
   const duration=SETTINGS.turnDuration*remaining*0.4;
