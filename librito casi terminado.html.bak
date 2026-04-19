@@ -407,8 +407,8 @@
     }
 
     .app-viewer.is-zoomed {
-      overflow: visible;
-      touch-action: none;
+      overflow: auto;
+      touch-action: pan-x pan-y;
     }
 
     .viewer-stage {
@@ -428,24 +428,13 @@
       overflow: visible;
     }
 
-    #zoomContainer {
+    .book-root {
       position: absolute;
       left: 50%;
       top: 50%;
       width: var(--spread-width);
       height: var(--page-height);
-      transform: translate(-50%, -50%);
-      transform-origin: center center;
-      will-change: transform;
-    }
-
-    .book-root {
-      position: absolute;
-      left: 0;
-      top: 0;
-      width: var(--spread-width);
-      height: var(--page-height);
-      transform: scale(var(--book-scale));
+      transform: translate3d(-50%, -50%, 0) scale(var(--book-scale));
       transform-origin: center center;
       will-change: transform;
       perspective: 3000px;
@@ -958,47 +947,45 @@
     <main class='app-viewer' id='viewer'>
       <div class='viewer-stage' id='viewerStage'>
         <div class='book-scaler' id='bookScaler'>
-          <div id='zoomContainer'>
-            <div class='book-root' id='bookRoot' data-cover-hidden='false' aria-live='polite'>
-              <div class='book-spine' aria-hidden='true'></div>
+          <div class='book-root' id='bookRoot' data-cover-hidden='false' aria-live='polite'>
+            <div class='book-spine' aria-hidden='true'></div>
 
-              <div class='spread spread-target' id='spreadTarget' aria-hidden='true'>
-                <article class='page-card page-left' id='targetLeft'>
-                  <div class='page-media'><img alt=''></div>
+            <div class='spread spread-target' id='spreadTarget' aria-hidden='true'>
+              <article class='page-card page-left' id='targetLeft'>
+                <div class='page-media'><img alt=''></div>
+              </article>
+              <article class='page-card page-right' id='targetRight'>
+                <div class='page-media'><img alt=''></div>
+              </article>
+            </div>
+
+            <div class='spread spread-current' id='spreadCurrent' data-hide-side='none'>
+              <article class='page-card page-left' id='currentLeft'>
+                <div class='page-media'><img alt=''></div>
+              </article>
+              <article class='page-card page-right' id='currentRight'>
+                <div class='page-media'><img alt=''></div>
+              </article>
+            </div>
+
+            <div class='turn-layer' id='turnLayer' data-direction='forward' hidden aria-hidden='true'>
+              <div class='turn-card' id='turnCard'>
+                <article class='turn-face front' id='turnFront'>
+                  <div class='turn-media'><img alt=''></div>
                 </article>
-                <article class='page-card page-right' id='targetRight'>
-                  <div class='page-media'><img alt=''></div>
+                <article class='turn-face back' id='turnBack'>
+                  <div class='turn-media'><img alt=''></div>
                 </article>
               </div>
+            </div>
 
-              <div class='spread spread-current' id='spreadCurrent' data-hide-side='none'>
-                <article class='page-card page-left' id='currentLeft'>
-                  <div class='page-media'><img alt=''></div>
-                </article>
-                <article class='page-card page-right' id='currentRight'>
-                  <div class='page-media'><img alt=''></div>
-                </article>
-              </div>
-
-              <div class='turn-layer' id='turnLayer' data-direction='forward' hidden aria-hidden='true'>
-                <div class='turn-card' id='turnCard'>
-                  <article class='turn-face front' id='turnFront'>
-                    <div class='turn-media'><img alt=''></div>
-                  </article>
-                  <article class='turn-face back' id='turnBack'>
-                    <div class='turn-media'><img alt=''></div>
-                  </article>
-                </div>
-              </div>
-
-              <div class='cover-sheet' id='coverSheet' data-action='open-cover' tabindex='0' role='button' aria-label='Abrir libro'>
-                <article class='cover-face front' id='coverFront'>
-                  <div class='cover-media'><img alt=''></div>
-                </article>
-                <article class='cover-face back is-empty' id='coverBack'>
-                  <div class='cover-media'><img alt=''></div>
-                </article>
-              </div>
+            <div class='cover-sheet' id='coverSheet' data-action='open-cover' tabindex='0' role='button' aria-label='Abrir libro'>
+              <article class='cover-face front' id='coverFront'>
+                <div class='cover-media'><img alt=''></div>
+              </article>
+              <article class='cover-face back is-empty' id='coverBack'>
+                <div class='cover-media'><img alt=''></div>
+              </article>
             </div>
           </div>
         </div>
@@ -1071,7 +1058,6 @@ const PAGES = [
       viewer: document.getElementById('viewer'),
       viewerStage: document.getElementById('viewerStage'),
       bookScaler: document.getElementById('bookScaler'),
-      zoomContainer: document.getElementById('zoomContainer'),
       bookRoot: document.getElementById('bookRoot'),
       spreadCurrent: document.getElementById('spreadCurrent'),
       spreadTarget: document.getElementById('spreadTarget'),
@@ -1315,13 +1301,6 @@ const PAGES = [
       state.fitScale = clamp(baseScale, 0.18, 2.4);
       const finalScale = clamp(state.fitScale * state.zoom, 0.18, 3.6);
       dom.app.style.setProperty('--book-scale', finalScale.toFixed(5));
-      
-      if (state.zoom > 1) {
-        dom.zoomContainer.style.transform = `translate(-50%, -50%) scale(${state.zoom})`;
-      } else {
-        dom.zoomContainer.style.transform = 'translate(-50%, -50%)';
-        dom.zoomContainer.style.transformOrigin = 'center center';
-      }
     }
 
     function updatePages() {
@@ -1574,7 +1553,7 @@ const PAGES = [
         openBook(2);
         return;
       }
-      const rect = dom.zoomContainer.getBoundingClientRect();
+      const rect = dom.bookRoot.getBoundingClientRect();
       const x = event.clientX - rect.left;
       if (x <= rect.width * 0.5) {
         step(-1);
@@ -1662,22 +1641,22 @@ const PAGES = [
         dom.viewer.classList.add('is-zoomed');
       } else if (zoom <= 1) {
         dom.viewer.classList.remove('is-zoomed');
-        dom.zoomContainer.style.transformOrigin = 'center center';
-        dom.zoomContainer.style.transform = 'translate(-50%, -50%)';
+        dom.bookRoot.style.transformOrigin = 'center center';
+        dom.bookRoot.style.translate = '0 0';
       }
       
       if (centerX !== undefined && centerY !== undefined) {
-        const rect = dom.zoomContainer.getBoundingClientRect();
-        const containerCenterX = rect.left + rect.width / 2;
-        const containerCenterY = rect.top + rect.height / 2;
+        const rect = dom.bookRoot.getBoundingClientRect();
+        const bookCenterX = rect.left + rect.width / 2;
+        const bookCenterY = rect.top + rect.height / 2;
         
-        const normalizedX = (centerX - containerCenterX) / (rect.width / 2);
-        const normalizedY = (centerY - containerCenterY) / (rect.height / 2);
+        const normalizedX = (centerX - bookCenterX) / (rect.width / 2);
+        const normalizedY = (centerY - bookCenterY) / (rect.height / 2);
         
         const originX = 50 + normalizedX * 50;
         const originY = 50 + normalizedY * 50;
         
-        dom.zoomContainer.style.transformOrigin = `${clamp(originX, 0, 100)}% ${clamp(originY, 0, 100)}%`;
+        dom.bookRoot.style.transformOrigin = `${clamp(originX, 0, 100)}% ${clamp(originY, 0, 100)}%`;
       }
       
       state.zoom = zoom;
@@ -1812,7 +1791,7 @@ const PAGES = [
         return;
       }
 
-      const rect = dom.zoomContainer.getBoundingClientRect();
+      const rect = dom.bookRoot.getBoundingClientRect();
       if (event.clientX < rect.left || event.clientX > rect.right || event.clientY < rect.top || event.clientY > rect.bottom) {
         return;
       }
@@ -1990,20 +1969,20 @@ const PAGES = [
       }
       const points = Array.from(state.pointers.values());
       if (!state.pinch) {
-        const rect = dom.zoomContainer.getBoundingClientRect();
+        const rect = dom.bookRoot.getBoundingClientRect();
         const centerX = (points[0].x + points[1].x) / 2;
         const centerY = (points[0].y + points[1].y) / 2;
         
-        const containerCenterX = rect.left + rect.width / 2;
-        const containerCenterY = rect.top + rect.height / 2;
+        const bookCenterX = rect.left + rect.width / 2;
+        const bookCenterY = rect.top + rect.height / 2;
         
-        const normalizedX = (centerX - containerCenterX) / (rect.width / 2);
-        const normalizedY = (centerY - containerCenterY) / (rect.height / 2);
+        const normalizedX = (centerX - bookCenterX) / (rect.width / 2);
+        const normalizedY = (centerY - bookCenterY) / (rect.height / 2);
         
         const originX = 50 + normalizedX * 50;
         const originY = 50 + normalizedY * 50;
         
-        dom.zoomContainer.style.transformOrigin = `${clamp(originX, 0, 100)}% ${clamp(originY, 0, 100)}%`;
+        dom.bookRoot.style.transformOrigin = `${clamp(originX, 0, 100)}% ${clamp(originY, 0, 100)}%`;
         
         state.pinch = {
           startDistance: getDistance(points[0], points[1]),
