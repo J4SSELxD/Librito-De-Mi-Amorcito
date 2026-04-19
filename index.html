@@ -69,11 +69,17 @@ body::after{background:radial-gradient(circle at center,transparent 54%,rgba(0,0
 .spine-shadow,.spine-highlight{position:absolute;top:12px;bottom:12px;left:calc(var(--page-width) + (var(--page-gap)/2));transform:translateX(-50%);pointer-events:none}
 .spine-shadow{width:40px;border-radius:999px;background:linear-gradient(to right,rgba(42,26,20,0.26),rgba(255,255,255,0.1),rgba(34,21,15,0.28));filter:blur(12px);opacity:.75}
 .spine-highlight{width:2px;background:linear-gradient(180deg,rgba(255,255,255,0.45),rgba(255,255,255,0),rgba(255,255,255,0.28))}
-.spread{position:absolute;inset:0;width:var(--spread-width);height:var(--page-height);display:grid;grid-template-columns:var(--page-width) var(--page-width);gap:var(--page-gap)}
-.spread.under{z-index:2;opacity:0;transition:opacity 200ms ease}
-.spread.current{z-index:4}
-.app-shell[data-turning="true"] .spread.under{opacity:1}
-.app-shell[data-turning="true"] .spread.current .page-sheet{opacity:.06}
+/* Double Buffer System - Only ONE visible layer at a time */
+.spread{position:absolute;inset:0;width:var(--spread-width);height:var(--page-height);display:grid;grid-template-columns:var(--page-width) var(--page-width);gap:var(--page-gap);transform-style:preserve-3d}
+/* Active Layer - ALWAYS visible, z-index high */
+.spread.active-layer{z-index:50;opacity:1;visibility:visible;pointer-events:auto}
+/* Buffer Layer - ALWAYS hidden until atomic swap, z-index low */
+.spread.buffer-layer{z-index:1;opacity:0;visibility:hidden;pointer-events:none}
+/* Turn Layer - TEMPORARY, only during animation, highest z-index */
+.spread.turn-layer{z-index:100;opacity:1;visibility:visible;pointer-events:none}
+/* During turn: hide under content completely, show ONLY turnLayer */
+.app-shell[data-turning="true"] .spread.buffer-layer{opacity:0!important;visibility:hidden!important}
+.app-shell[data-turning="true"] .spread.active-layer{opacity:1!important;visibility:visible!important}
 .page-sheet{position:relative;width:100%;height:100%;overflow:hidden;border-radius:var(--page-radius);transform-style:preserve-3d;will-change:transform,opacity;transform:translate3d(0,0,0);box-shadow:0 4px 20px rgba(0,0,0,0.08)}
 .page-face{position:absolute;inset:0;overflow:hidden;border-radius:var(--page-radius);background-color:var(--paper);background-position:center;background-repeat:no-repeat;background-size:cover;box-shadow:inset 0 0 0 1px rgba(120,94,77,0.08),0 14px 28px rgba(0,0,0,0.11);transform:translate3d(0,0,0);will-change:transform,opacity;backface-visibility:hidden;transform-style:preserve-3d}
 .page-face.back{transform:rotateY(180deg)}
@@ -168,11 +174,11 @@ body::after{background:radial-gradient(circle at center,transparent 54%,rgba(0,0
                 <div class="book-gloss"></div>
                 <div class="spine-shadow"></div>
                 <div class="spine-highlight"></div>
-                <div class="page-wrapper spread under" id="underSpread" aria-hidden="true">
+                <div class="page-wrapper spread buffer-layer" id="underSpread" aria-hidden="true">
                   <article class="page-sheet page-left"><div class="page-face front" id="underLeftFront"></div><div class="page-face back" id="underLeftBack"></div></article>
                   <article class="page-sheet page-right"><div class="page-face front" id="underRightFront"></div><div class="page-face back" id="underRightBack"></div></article>
                 </div>
-                <div class="page-wrapper spread current" id="currentSpread">
+                <div class="page-wrapper spread active-layer" id="currentSpread">
                   <article class="page-sheet page-left" id="currentLeftSheet"><div class="page-face front" id="currentLeftFront"></div><div class="page-face back" id="currentLeftBack"></div></article>
                   <article class="page-sheet page-right" id="currentRightSheet"><div class="page-face front" id="currentRightFront"></div><div class="page-face back" id="currentRightBack"></div></article>
                 </div>
@@ -450,18 +456,19 @@ async function turn(direction){
   if(direction<0&&state.currentIndex<=1){await closeBook('front');return;}
   if(targetIndex===state.currentIndex)return;
   const fromView=getView(state.currentIndex),toView=getView(targetIndex);
+  
+  // DOUBLE BUFFER: Prepare buffer layer with NEXT content (hidden)
+  prepareBufferLayer(direction,targetIndex);
+  
   state.animating=true;
   dom.app.dataset.turning='true';
   prepareTurn(direction,fromView,toView);
+  
   await animateValue({duration:reducedMotionQuery.matches?180:SETTINGS.turnDuration,onUpdate:(raw)=>{const phased=phaseCurve(raw);applyTurn(direction,phased);}});
-  state.currentIndex=targetIndex;state.animating=false;
-  dom.app.dataset.turning='false';
+  
+  // ATOMIC SWAP: Hide active, show buffer as new active (same frame)
   requestAnimationFrame(()=>{
-    const fv=getView(),fb=getStaticBackPages();
-    setSheetTextures(dom.currentLeftFront,dom.currentLeftBack,fv.left,fb.leftBack);
-    setSheetTextures(dom.currentRightFront,dom.currentRightBack,fv.right,fb.rightBack);
-    state.lastRenderedKey=[state.bookState,state.layout,state.currentIndex,state.closedFace,state.pages.length].join(':');
-    resetTurnVisuals();updateUi(true);
+    performAtomicSwap(direction,targetIndex);
   });
 }
 
@@ -470,25 +477,76 @@ function prepareTurn(direction,fromView,toView){
   const targetIndex=normalizeIndex(state.currentIndex+direction*getStep());
   const fromBacks=getStaticBackPages(state.currentIndex),toBacks=getStaticBackPages(targetIndex);
   if(state.layout==='single'){
-    setSheetTextures(dom.underLeftFront,dom.underLeftBack,null,null);
-    setSheetTextures(dom.underRightFront,dom.underRightBack,toView.right,toBacks.rightBack);
+    // In single mode, buffer layer already prepared by prepareBufferLayer
+    // turnLayer (peel) shows the page that is turning
     if(direction>0){setTexture(dom.peelNextFront,fromView.right);setTexture(dom.peelNextBack,toView.right);dom.peelNext.classList.add('active');dom.peelNext.style.zIndex='90';dom.peelNext.style.transformOrigin='left center';dom.peelNextSheet.style.transformOrigin='left center';}
     else{setTexture(dom.peelPrevFront,fromView.right);setTexture(dom.peelPrevBack,toView.right);dom.peelPrev.classList.add('active');dom.peelPrev.style.zIndex='90';dom.peelPrev.style.transformOrigin='right center';dom.peelPrevSheet.style.transformOrigin='right center';}
     return;
   }
   if(direction>0){
-    setSheetTextures(dom.underLeftFront,dom.underLeftBack,fromView.left,fromBacks.leftBack);
-    setSheetTextures(dom.underRightFront,dom.underRightBack,toView.right,toBacks.rightBack);
+    // Turn right: peel Next (right page turns to left)
+    // activeLayer shows current spread, bufferLayer has next spread hidden
+    // turnLayer (peelNext) shows fromView.right turning
     setTexture(dom.peelNextFront,fromView.right);setTexture(dom.peelNextBack,toView.left);
     dom.peelNext.classList.add('active');dom.peelNext.style.zIndex='90';
     dom.peelNext.style.transformOrigin='left center';dom.peelNextSheet.style.transformOrigin='left center';
   }else{
-    setSheetTextures(dom.underLeftFront,dom.underLeftBack,toView.left,toBacks.leftBack);
-    setSheetTextures(dom.underRightFront,dom.underRightBack,fromView.right,fromBacks.rightBack);
+    // Turn left: peel Prev (left page turns to right)
     setTexture(dom.peelPrevFront,fromView.left);setTexture(dom.peelPrevBack,toView.right);
     dom.peelPrev.classList.add('active');dom.peelPrev.style.zIndex='90';
     dom.peelPrev.style.transformOrigin='right center';dom.peelPrevSheet.style.transformOrigin='right center';
   }
+}
+
+// DOUBLE BUFFER: Prepare buffer layer with next content (stays hidden until swap)
+function prepareBufferLayer(direction,targetIndex){
+  const toView=getView(targetIndex),toBacks=getStaticBackPages(targetIndex);
+  if(state.layout==='single'){
+    setSheetTextures(dom.underLeftFront,dom.underLeftBack,null,null);
+    setSheetTextures(dom.underRightFront,dom.underRightBack,toView.right,toBacks.rightBack);
+  }else{
+    if(direction>0){
+      // Going forward: buffer gets the NEXT spread (toView.left on left, toView.right on right... but wait)
+      // After turning right: we see toView.left (which was behind) and toView.right (new page)
+      setSheetTextures(dom.underLeftFront,dom.underLeftBack,toView.left,toBacks.leftBack);
+      setSheetTextures(dom.underRightFront,dom.underRightBack,toView.right,toBacks.rightBack);
+    }else{
+      // Going backward: buffer gets the PREVIOUS spread
+      setSheetTextures(dom.underLeftFront,dom.underLeftBack,toView.left,toBacks.leftBack);
+      setSheetTextures(dom.underRightFront,dom.underRightBack,toView.right,toBacks.rightBack);
+    }
+  }
+  // Buffer layer stays HIDDEN (opacity:0, visibility:hidden via CSS class .buffer-layer)
+}
+
+// ATOMIC SWAP: Execute layer swap in single frame - NO visual glitch
+function performAtomicSwap(direction,targetIndex){
+  // Step 1: Get new views for active layer
+  const fv=getView(targetIndex),fb=getStaticBackPages(targetIndex);
+  
+  // Step 2: ATOMIC swap - hide old active, show buffer as new active (same RAF)
+  dom.currentSpread.classList.remove('active-layer');
+  dom.currentSpread.classList.add('buffer-layer');
+  dom.underSpread.classList.remove('buffer-layer');
+  dom.underSpread.classList.add('active-layer');
+  
+  // Step 3: Update textures on NEW active layer (formerly buffer)
+  setSheetTextures(dom.currentLeftFront,dom.currentLeftBack,fv.left,fb.leftBack);
+  setSheetTextures(dom.currentRightFront,dom.currentRightBack,fv.right,fb.rightBack);
+  
+  // Step 4: Clear OLD buffer layer (formerly active) - now becomes new buffer
+  setSheetTextures(dom.underLeftFront,dom.underLeftBack,null,null);
+  setSheetTextures(dom.underRightFront,dom.underRightBack,null,null);
+  
+  // Step 5: Reset state
+  state.currentIndex=targetIndex;
+  state.animating=false;
+  dom.app.dataset.turning='false';
+  state.lastRenderedKey=[state.bookState,state.layout,state.currentIndex,state.closedFace,state.pages.length].join(':');
+  
+  // Step 6: Cleanup turn layer visuals
+  resetTurnVisuals();
+  updateUi(true);
 }
 
 function applyTurn(direction,phased){
@@ -541,8 +599,8 @@ function resetTurnVisuals(){
   });
   dom.peelNextSheet.style.transform='translate3d(0,0,1px)';dom.peelPrevSheet.style.transform='translate3d(0,0,1px)';
   dom.peelNextSheet.style.transformOrigin='';dom.peelPrevSheet.style.transformOrigin='';
-  setSheetTextures(dom.underLeftFront,dom.underLeftBack,null,null);
-  setSheetTextures(dom.underRightFront,dom.underRightBack,null,null);
+  // NOTE: Do NOT clear underSpread textures here - they are managed by double buffer system
+  // Only clear peel textures (turn layer)
   clearTexture(dom.peelNextFront);clearTexture(dom.peelNextBack);
   clearTexture(dom.peelPrevFront);clearTexture(dom.peelPrevBack);
 }
@@ -598,14 +656,10 @@ async function completeDragTurn(direction,fromProgress){
   const remaining=1-fromProgress;
   const duration=SETTINGS.turnDuration*remaining*0.4;
   await animateValue({duration,onUpdate:(r)=>{const currentProgress=fromProgress+remaining*r;const phased=phaseCurve(currentProgress);applyTurn(direction,phased);}});
-  state.currentIndex=state.drag.targetIndex;state.animating=false;
-  dom.app.dataset.turning='false';
+  
+  // ATOMIC SWAP using double buffer system
   requestAnimationFrame(()=>{
-    const fv=getView(),fb=getStaticBackPages();
-    setSheetTextures(dom.currentLeftFront,dom.currentLeftBack,fv.left,fb.leftBack);
-    setSheetTextures(dom.currentRightFront,dom.currentRightBack,fv.right,fb.rightBack);
-    state.lastRenderedKey=[state.bookState,state.layout,state.currentIndex,state.closedFace,state.pages.length].join(':');
-    resetTurnVisuals();updateUi(true);
+    performAtomicSwap(direction,state.drag.targetIndex);
   });
 }
 async function snapBackDrag(direction,fromProgress){
