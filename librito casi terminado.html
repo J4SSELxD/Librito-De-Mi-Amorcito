@@ -694,6 +694,33 @@
         inset 0 1px 0 rgba(255, 255, 255, 0.07);
     }
 
+    .app-shell.is-fullscreen.is-controls-hidden .toolbar,
+    .app-shell.is-fullscreen.is-controls-hidden .footer-bar,
+    .app-shell.is-pseudo-fullscreen.is-controls-hidden .toolbar,
+    .app-shell.is-pseudo-fullscreen.is-controls-hidden .footer-bar {
+      opacity: 0;
+      pointer-events: none;
+      transform: translateY(0);
+    }
+
+    .app-shell.is-fullscreen.is-controls-hidden .toolbar,
+    .app-shell.is-pseudo-fullscreen.is-controls-hidden .toolbar {
+      transform: translateY(-100%);
+    }
+
+    .app-shell.is-fullscreen.is-controls-hidden .footer-bar,
+    .app-shell.is-pseudo-fullscreen.is-controls-hidden .footer-bar {
+      transform: translateY(100%);
+    }
+
+    .toolbar,
+    .footer-bar {
+      transition:
+        opacity 280ms ease,
+        transform 280ms ease,
+        box-shadow 180ms ease;
+    }
+
     @media (max-width: 920px) {
       :root {
         --header-h: 82px;
@@ -1000,6 +1027,8 @@ const PAGES = [
       selectorOpen: false,
       isFullscreen: false,
       pseudoFullscreen: false,
+      controlsVisible: true,
+      controlsTimeout: null,
       viewportWidth: window.innerWidth,
       viewportHeight: window.innerHeight,
       fitScale: 1,
@@ -1310,6 +1339,7 @@ const PAGES = [
 
       dom.app.classList.toggle('is-fullscreen', fullscreenOn);
       dom.app.classList.toggle('is-pseudo-fullscreen', state.pseudoFullscreen);
+      dom.app.classList.toggle('is-controls-hidden', fullscreenOn && !state.controlsVisible);
       dom.selector.hidden = !state.selectorOpen;
       dom.selectorButton.setAttribute('aria-expanded', state.selectorOpen ? 'true' : 'false');
       dom.fullscreenButton.setAttribute('aria-pressed', fullscreenOn ? 'true' : 'false');
@@ -1395,6 +1425,11 @@ const PAGES = [
       if (!event.target.closest('#bookRoot')) {
         return;
       }
+      const fullscreenOn = Boolean(document.fullscreenElement) || state.pseudoFullscreen;
+      if (fullscreenOn) {
+        toggleControls();
+        return;
+      }
       if (!state.isOpen) {
         openBook(2);
         return;
@@ -1408,6 +1443,22 @@ const PAGES = [
       }
     }
 
+    function toggleControls() {
+      const wasVisible = state.controlsVisible;
+      state.controlsVisible = !wasVisible;
+      if (state.controlsTimeout) {
+        clearTimeout(state.controlsTimeout);
+        state.controlsTimeout = null;
+      }
+      if (!state.controlsVisible) {
+        state.controlsTimeout = setTimeout(() => {
+          state.controlsVisible = true;
+          scheduleRender();
+        }, 3000);
+      }
+      scheduleRender();
+    }
+
     function handleAction(action, source, event) {
       if (event) {
         event.preventDefault();
@@ -1418,26 +1469,36 @@ const PAGES = [
             openBook(2);
           }
           break;
-        case 'prev':
-          step(-1);
-          break;
-        case 'next':
-          step(1);
-          break;
-        case 'zoom-in':
-          setZoom(state.zoom + SETTINGS.zoomStep);
-          break;
-        case 'zoom-out':
-          setZoom(state.zoom - SETTINGS.zoomStep);
-          break;
-        case 'zoom-reset':
-          setZoom(1);
-          break;
         case 'toggle-selector':
           toggleSelector();
           break;
         case 'toggle-fullscreen':
           toggleFullscreen();
+          break;
+        case 'prev':
+        case 'next':
+        case 'zoom-in':
+        case 'zoom-out':
+        case 'zoom-reset':
+          if (Boolean(document.fullscreenElement) || state.pseudoFullscreen) {
+            state.controlsVisible = true;
+            if (state.controlsTimeout) {
+              clearTimeout(state.controlsTimeout);
+              state.controlsTimeout = null;
+            }
+            scheduleRender();
+          }
+          if (action === 'prev') {
+            step(-1);
+          } else if (action === 'next') {
+            step(1);
+          } else if (action === 'zoom-in') {
+            setZoom(state.zoom + SETTINGS.zoomStep);
+          } else if (action === 'zoom-out') {
+            setZoom(state.zoom - SETTINGS.zoomStep);
+          } else if (action === 'zoom-reset') {
+            setZoom(1);
+          }
           break;
         case 'jump':
           navigateTo(Number(source.dataset.page));
@@ -1491,7 +1552,15 @@ const PAGES = [
       if (document.fullscreenElement) {
         state.pseudoFullscreen = false;
       }
+      const wasFullscreen = state.isFullscreen;
       state.isFullscreen = Boolean(document.fullscreenElement) || state.pseudoFullscreen;
+      if (!wasFullscreen && state.isFullscreen) {
+        state.controlsVisible = true;
+        if (state.controlsTimeout) {
+          clearTimeout(state.controlsTimeout);
+          state.controlsTimeout = null;
+        }
+      }
       measureViewer();
       scheduleRender();
     }
