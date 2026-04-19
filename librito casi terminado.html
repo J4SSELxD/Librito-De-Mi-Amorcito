@@ -983,20 +983,20 @@
               <div class='turn-layer' id='turnLayer' data-direction='forward' hidden aria-hidden='true'>
                 <div class='turn-card' id='turnCard'>
                   <article class='turn-face front' id='turnFront'>
-                    <div class='turn-media'><img alt=''></div>
+                    <div class='turn-media'><img alt='' loading="lazy"></div>
                   </article>
                   <article class='turn-face back' id='turnBack'>
-                    <div class='turn-media'><img alt=''></div>
+                    <div class='turn-media'><img alt='' loading="lazy"></div>
                   </article>
                 </div>
               </div>
 
               <div class='cover-sheet' id='coverSheet' data-action='open-cover' tabindex='0' role='button' aria-label='Abrir libro'>
                 <article class='cover-face front' id='coverFront'>
-                  <div class='cover-media'><img alt=''></div>
+                  <div class='cover-media'><img alt='' loading="lazy"></div>
                 </article>
                 <article class='cover-face back is-empty' id='coverBack'>
-                  <div class='cover-media'><img alt=''></div>
+                  <div class='cover-media'><img alt='' loading="lazy"></div>
                 </article>
               </div>
             </div>
@@ -1219,7 +1219,7 @@ const PAGES = [
           return [
             '<button class="selector-card" type="button" data-action="jump" data-page="0">',
             '<span class="selector-preview is-cover">',
-            '<img src="' + view.pages[0].src + '" alt="Portada">',
+            '<img src="' + view.pages[0].src + '" alt="Portada" loading="lazy">',
             '</span>',
             '<span class="selector-meta">',
             '<span class="selector-label">Portada</span>',
@@ -1231,8 +1231,8 @@ const PAGES = [
         return [
           '<button class="selector-card" type="button" data-action="jump" data-page="' + String(view.page) + '">',
           '<span class="selector-preview">',
-          '<img src="' + view.pages[0].src + '" alt="Página ' + String(view.page) + '">',
-          '<img src="' + view.pages[1].src + '" alt="Página ' + String(view.page + 1) + '">',
+          '<img src="' + view.pages[0].src + '" alt="Página ' + String(view.page) + '" loading="lazy">',
+          '<img src="' + view.pages[1].src + '" alt="Página ' + String(view.page + 1) + '" loading="lazy">',
           '</span>',
           '<span class="selector-meta">',
           '<span class="selector-label">' + view.label + '</span>',
