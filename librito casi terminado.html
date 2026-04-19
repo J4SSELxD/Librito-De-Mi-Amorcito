@@ -1641,6 +1641,8 @@ const PAGES = [
         dom.viewer.classList.add('is-zoomed');
       } else if (zoom <= 1) {
         dom.viewer.classList.remove('is-zoomed');
+        dom.bookRoot.style.transformOrigin = 'center center';
+        dom.bookRoot.style.translate = '0 0';
       }
       
       if (centerX !== undefined && centerY !== undefined) {
@@ -1835,7 +1837,7 @@ const PAGES = [
         state.pointers.set(event.pointerId, { x: event.clientX, y: event.clientY, type: event.pointerType });
       }
 
-      if (state.pinch && state.pointers.has(event.pointerId)) {
+      if (state.pinch && state.pointers.size >= 2) {
         const zoom = state.pinch.startZoom * (getPinchDistance() / Math.max(1, state.pinch.startDistance));
         setZoom(zoom);
         state.suppressClickUntil = performance.now() + 420;
@@ -1885,6 +1887,12 @@ const PAGES = [
 
     function onPointerUp(event) {
       state.pointers.delete(event.pointerId);
+      
+      if (state.pinch && state.pointers.size < 2) {
+        state.pinch = null;
+        return;
+      }
+      
       updatePinchState();
 
       if (!state.gesture || state.gesture.pointerId !== event.pointerId) {
