@@ -770,23 +770,51 @@ function endDrag(){
 }
 function onTouchStart(e){
   if(e.touches.length===2){state.pinch={distance:getTouchDist(e.touches),zoom:state.userZoom};return;}
-  if(e.touches.length!==1||state.animating)return;
+  if(e.touches.length!==1||state.animating||state.bookState!=='open')return;
   const t=e.touches[0];
-  state.swipe={startX:t.clientX,startY:t.clientY,lastX:t.clientX,lastY:t.clientY,time:performance.now()};
+  const rect=dom.bookRoot.getBoundingClientRect();
+  if(t.clientX<rect.left||t.clientX>rect.right||t.clientY<rect.top||t.clientY>rect.bottom)return;
+  const edgeThreshold=rect.width*0.35;
+  const fromRight=t.clientX>rect.right-edgeThreshold;
+  const fromLeft=t.clientX<rect.left+edgeThreshold;
+  if(!fromRight&&!fromLeft)return;
+  const direction=fromRight?1:-1;
+  if(direction>0&&state.currentIndex>=getLastOpenIndex())return;
+  if(direction<0&&state.currentIndex<=1)return;
+  const targetIndex=normalizeIndex(state.currentIndex+direction*getStep());
+  prepareBufferLayer(direction,targetIndex);
+  state.drag={active:true,direction,startX:t.clientX,currentProgress:0,targetIndex:targetIndex};
+  e.preventDefault();
 }
 function onTouchMove(e){
   if(e.touches.length===2&&state.pinch){const dist=getTouchDist(e.touches);setZoom(state.pinch.zoom*(dist/Math.max(1,state.pinch.distance)));e.preventDefault();return;}
-  if(!state.swipe||e.touches.length!==1)return;
-  state.swipe.lastX=e.touches[0].clientX;state.swipe.lastY=e.touches[0].clientY;
+  if(!state.drag.active||e.touches.length!==1)return;
+  e.preventDefault();
+  const t=e.touches[0];
+  const dx=t.clientX-state.drag.startX;
+  const direction=state.drag.direction;
+  const halfPage=SETTINGS.pageWidth*0.5;
+  let rawProgress=direction>0?(-dx/halfPage):(dx/halfPage);
+  rawProgress=clamp(rawProgress,0,1);
+  state.drag.currentProgress=rawProgress;
+  const phased=phaseCurve(rawProgress);
+  if(rawProgress>0&&rawProgress<1){
+    const fromView=getView(state.currentIndex);
+    const toView=getView(state.drag.targetIndex);
+    if(!dom.peelNext.classList.contains('active')&&!dom.peelPrev.classList.contains('active')){
+      dom.app.dataset.turning='true';prepareTurn(direction,fromView,toView);
+    }
+    applyTurn(direction,phased);
+  }
 }
-function onTouchEnd(){
+function onTouchEnd(e){
   state.pinch=null;
-  if(!state.swipe)return;
-  const dx=state.swipe.lastX-state.swipe.startX;
-  const dy=state.swipe.lastY-state.swipe.startY;
-  const dt=performance.now()-state.swipe.time;
-  if(Math.abs(dx)>56&&Math.abs(dx)>Math.abs(dy)*1.2&&dt<760){if(dx<0)goForward();else goBackward();}
-  state.swipe=null;
+  if(!state.drag.active)return;
+  state.drag.active=false;
+  const progress=state.drag.currentProgress;
+  const direction=state.drag.direction;
+  if(progress>0.35)completeDragTurn(direction,progress);
+  else snapBackDrag(direction,progress);
 }
 function getTouchDist(touches){const[a,b]=touches;return Math.hypot(a.clientX-b.clientX,a.clientY-b.clientY);}
 
