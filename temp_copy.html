@@ -4,7 +4,6 @@
   <meta charset='utf-8'>
   <meta name='viewport' content='width=device-width, initial-scale=1, viewport-fit=cover'>
   <meta name='color-scheme' content='dark'>
-  <meta name='description' content='Libro digital interactivo - Feliz Cumpleaños'>
   <title>Feliz Cumpleaños Mi Niña Preciosa (AILISH)</title>
   <style>
     :root {
@@ -402,7 +401,7 @@
         calc(max(14px, var(--safe-bottom)) + var(--footer-h) + 14px)
         0;
       overflow: hidden;
-      touch-action: pan-y pinch-zoom;
+      touch-action: none;
       z-index: 10;
     }
 
@@ -1147,12 +1146,12 @@ const PAGES = [
       }
       state.bound = true;
       dom.app.addEventListener('click', onAppClick);
-      document.addEventListener('pointerdown', onDocumentPointerDown, { capture: true, passive: true });
+      document.addEventListener('pointerdown', onDocumentPointerDown, true);
       window.addEventListener('keydown', onKeyDown);
-      dom.viewer.addEventListener('pointerdown', onPointerDown, { passive: true });
-      dom.viewer.addEventListener('pointermove', onPointerMove, { passive: false });
-      window.addEventListener('pointerup', onPointerUp, { passive: true });
-      window.addEventListener('pointercancel', onPointerUp, { passive: true });
+      dom.viewer.addEventListener('pointerdown', onPointerDown);
+      dom.viewer.addEventListener('pointermove', onPointerMove);
+      window.addEventListener('pointerup', onPointerUp);
+      window.addEventListener('pointercancel', onPointerUp);
       dom.viewer.addEventListener('wheel', onWheel, { passive: false });
       document.addEventListener('fullscreenchange', onFullscreenChange);
       resizeObserver = new ResizeObserver(() => {
