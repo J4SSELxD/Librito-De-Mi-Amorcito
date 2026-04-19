@@ -507,13 +507,18 @@ function prepareTurn(direction,fromView,toView){
   }
   if(direction>0){
     // Turn right: peel Next (right page turns to left)
-    // activeLayer shows current spread, bufferLayer has next spread hidden
-    // turnLayer (peelNext) shows fromView.right turning
+    // CRITICAL FIX: Hide the turning page (right) on activeLayer BEFORE showing peel
+    dom.currentRightFront.style.opacity='0';
+    dom.currentRightBack.style.opacity='0';
+    // Set textures for peel
     setTexture(dom.peelNextFront,fromView.right);setTexture(dom.peelNextBack,toView.left);
     dom.peelNext.classList.add('active');dom.peelNext.style.zIndex='90';
     dom.peelNext.style.transformOrigin='left center';dom.peelNextSheet.style.transformOrigin='left center';
   }else{
     // Turn left: peel Prev (left page turns to right)
+    // CRITICAL FIX: Hide the turning page (left) on activeLayer BEFORE showing peel
+    dom.currentLeftFront.style.opacity='0';
+    dom.currentLeftBack.style.opacity='0';
     setTexture(dom.peelPrevFront,fromView.left);setTexture(dom.peelPrevBack,toView.right);
     dom.peelPrev.classList.add('active');dom.peelPrev.style.zIndex='90';
     dom.peelPrev.style.transformOrigin='right center';dom.peelPrevSheet.style.transformOrigin='right center';
@@ -739,7 +744,6 @@ async function completeDragTurn(direction,fromProgress){
     try {
       performAtomicSwap(direction,state.drag.targetIndex);
     } catch(err) {
-      console.error('Error in atomic swap:', err);
       state.animating=false;
       dom.app.dataset.turning='false';
       resetTurnVisuals();
@@ -821,7 +825,7 @@ function calculateScale(){
   dom.app.style.setProperty('--frame-scale',clamp(autoScale*state.userZoom,0.18,3.2).toFixed(5));
 }
 function setZoom(nextZoom){const zoom=clamp(nextZoom,SETTINGS.minZoom,SETTINGS.maxZoom);if(Math.abs(zoom-state.userZoom)<0.005)return;state.userZoom=zoom;updateUi();calculateScale();}
-async function toggleFullscreen(){try{if(document.fullscreenElement)await document.exitFullscreen();else await dom.stageCard.requestFullscreen();}catch(e){console.warn('Fullscreen no disponible',e);}}
+async function toggleFullscreen(){try{if(document.fullscreenElement)await document.exitFullscreen();else await dom.stageCard.requestFullscreen();}catch(e){}}
 function onKeyDown(e){
   if(e.defaultPrevented)return;
   const tag=(document.activeElement?.tagName||'').toLowerCase();
