@@ -47,11 +47,11 @@ body::after{background:radial-gradient(circle at center,transparent 54%,rgba(0,0
 .zoom-pill{min-width:64px;padding:0 14px;font-size:12px;font-weight:700;letter-spacing:.08em;text-transform:uppercase}
 .stage-card{position:relative;flex:1;display:flex;align-items:center;justify-content:center;width:100%;min-height:0;overflow:hidden}
 .stage-card.fullscreen-wrapper,.stage-card:fullscreen{display:flex;justify-content:center;align-items:center;width:100vw;height:100vh;margin:0;padding:0;background:radial-gradient(980px 660px at 50% -12%,rgba(255,227,213,0.18),transparent 60%),linear-gradient(180deg,#2e221f 0%,#130f10 48%,#060506 100%)}
-.stage-card:fullscreen .ui-root{position:fixed!important;visibility:visible!important;opacity:1!important;top:max(12px,env(safe-area-inset-top))!important;z-index:2147483647!important}
-.stage-card:fullscreen .topbar{pointer-events:auto!important}
-.stage-card:fullscreen .control-strip{pointer-events:auto!important}
-.stage-card:fullscreen .statusbar{visibility:visible!important;opacity:1!important;z-index:2147483646!important;bottom:0!important}
-.stage-card:fullscreen #pageSelectorPanel{position:fixed!important;top:calc(70px + env(safe-area-inset-top))!important;z-index:2147483646!important}
+.stage-card:fullscreen .ui-root{position:fixed!important;visibility:visible!important;opacity:1!important;top:max(12px,env(safe-area-inset-top))!important;z-index:2147483647!important;pointer-events:none!important}
+.stage-card:fullscreen .topbar{pointer-events:auto!important;display:flex!important}
+.stage-card:fullscreen .control-strip{pointer-events:auto!important;display:flex!important}
+.stage-card:fullscreen .statusbar{visibility:visible!important;opacity:1!important;z-index:2147483646!important;bottom:0!important;display:flex!important}
+.stage-card:fullscreen #pageSelectorPanel{position:fixed!important;top:calc(70px + env(safe-area-inset-top))!important;z-index:2147483646!important;display:block!important}
 .stage-viewport{position:relative;width:100%;height:100%;display:flex;justify-content:center;align-items:center;overflow:hidden;touch-action:manipulation}
 .stage-surface{width:100%;height:100%;display:flex;justify-content:center;align-items:center}
 .book-root{position:relative;width:var(--spread-width);height:var(--page-height);display:flex;justify-content:center;align-items:center;perspective:2800px;perspective-origin:50% 50%;transform-style:preserve-3d;will-change:transform;transition:transform 120ms ease-out;margin:auto}
@@ -232,7 +232,7 @@ function renderUI() {
         </div>
       </div>
     </header>
-    <div id="pageSelectorPanel" style="display:none;position:fixed;top:calc(70px + env(safe-area-inset-top));left:50%;transform:translateX(-50%);z-index:2147483646;background:rgba(0,0,0,0.9);backdrop-filter:blur(20px);border-radius:16px;padding:16px;border:1px solid rgba(255,255,255,0.1);max-width:90vw;max-height:60vh;overflow-y:auto;pointer-events:auto;">
+    <div id="pageSelectorPanel" style="display:none;position:fixed;top:calc(70px + env(safe-area-inset-top));left:50%;transform:translateX(-50%);z-index:2147483646;background:rgba(0,0,0,0.9);backdrop-filter:blur(20px);border-radius:16px;padding:16px;border:1px solid rgba(255,255,255,0.1);max-width:90vw;max-height:60vh;overflow-y:auto;pointer-events:none;">
       <div id="pageSelectorGrid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(80px,1fr));gap:12px;pointer-events:auto;"></div>
     </div>
   `;
@@ -254,7 +254,11 @@ function renderUI() {
     }
     
     if (dom.btnPageSelector) {
-      dom.btnPageSelector.addEventListener('click', togglePageSelector);
+      dom.btnPageSelector.addEventListener('click', function(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        togglePageSelector();
+      });
       renderPageSelector();
     }
     
@@ -263,16 +267,23 @@ function renderUI() {
         dom.pageSelectorPanel.style.display = 'none';
         dom.btnPageSelector.setAttribute('aria-expanded', 'false');
       }
-    });
+    }, true);
   }, 0);
 }
 
 function togglePageSelector() {
-  if (!dom.pageSelectorPanel) return;
+  if (!dom.pageSelectorPanel || !dom.btnPageSelector) return;
   const isVisible = dom.pageSelectorPanel.style.display !== 'none';
   dom.pageSelectorPanel.style.display = isVisible ? 'none' : 'block';
   dom.btnPageSelector.setAttribute('aria-expanded', !isVisible);
-  if (!isVisible) renderPageSelector();
+  if (!isVisible) {
+    renderPageSelector();
+    setTimeout(() => {
+      dom.pageSelectorPanel.style.pointerEvents = 'auto';
+    }, 10);
+  } else {
+    dom.pageSelectorPanel.style.pointerEvents = 'none';
+  }
 }
 
 function renderPageSelector() {
@@ -286,7 +297,9 @@ function renderPageSelector() {
       ';transition:border-color 0.2s;background:#000;';
     thumb.innerHTML = `<img src="${page.src}" style="width:100%;height:100%;object-fit:contain;" alt="Página ${page.number}">` +
       `<div style="position:absolute;bottom:2px;right:4px;background:rgba(0,0,0,0.7);color:white;font-size:10px;padding:2px 6px;border-radius:4px;">${page.number}</div>`;
-    thumb.addEventListener('click', () => {
+    thumb.addEventListener('click', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
       if (state.bookState === 'closed' && index > 0) {
         openBook(1);
       } else if (state.bookState === 'open') {
