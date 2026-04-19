@@ -385,31 +385,6 @@ function debounce(fn,wait){let t=0;return(...args)=>{clearTimeout(t);t=setTimeou
 // Build pages
 const pagesData = PAGES.map((p,i)=>({number:p.number,src:p.src,mobileSrc:p.src,thumb:p.src,label:p.label}));
 
-const dom={
-  app:document.getElementById('app'),loadingState:document.getElementById('loadingState'),
-  loadingCover:document.getElementById('loadingCover'),stageCard:document.getElementById('stageCard'),
-  stageViewport:document.getElementById('stageViewport'),bookRoot:document.getElementById('bookRoot'),
-  bookFrame:document.getElementById('bookFrame'),closedBook:document.getElementById('closedBook'),
-  coverWrapper:document.getElementById('coverWrapper'),coverPage:document.getElementById('coverPage'),
-  coverPageBack:document.getElementById('coverPageBack'),coverCta:document.getElementById('coverCta'),
-  spreadBook:document.getElementById('spreadBook'),currentSpread:document.getElementById('currentSpread'),
-  underSpread:document.getElementById('underSpread'),currentLeftFront:document.getElementById('currentLeftFront'),
-  currentLeftBack:document.getElementById('currentLeftBack'),currentRightFront:document.getElementById('currentRightFront'),
-  currentRightBack:document.getElementById('currentRightBack'),underLeftFront:document.getElementById('underLeftFront'),
-  underLeftBack:document.getElementById('underLeftBack'),underRightFront:document.getElementById('underRightFront'),
-  underRightBack:document.getElementById('underRightBack'),peelNext:document.getElementById('peelNext'),
-  peelNextSheet:document.getElementById('peelNextSheet'),peelNextFront:document.getElementById('peelNextFront'),
-  peelNextBack:document.getElementById('peelNextBack'),peelPrev:document.getElementById('peelPrev'),
-  peelPrevSheet:document.getElementById('peelPrevSheet'),peelPrevFront:document.getElementById('peelPrevFront'),
-  peelPrevBack:document.getElementById('peelPrevBack'),cornerPrevTop:document.getElementById('cornerPrevTop'),
-  cornerPrevBottom:document.getElementById('cornerPrevBottom'),cornerNextTop:document.getElementById('cornerNextTop'),
-  cornerNextBottom:document.getElementById('cornerNextBottom'),btnPrev:document.getElementById('btnPrev'),
-  btnNext:document.getElementById('btnNext'),btnZoomOut:null,btnZoomIn:null,btnZoomReset:null,
-  btnFullscreen:null,zoomIndicator:document.getElementById('zoomIndicator'),
-  pageIndicator:document.getElementById('pageIndicator'),progressFill:document.getElementById('progressFill'),
-  statusHint:document.getElementById('statusHint'),btnPageSelector:null,pageSelectorPanel:null,pageSelectorGrid:null,
-};
-
 const mobileQuery=window.matchMedia('(max-width:960px),(orientation:portrait)');
 const reducedMotionQuery=window.matchMedia('(prefers-reduced-motion:reduce)');
 
@@ -421,27 +396,59 @@ const state={
   drag:{active:false,direction:0,startX:0,currentProgress:0,targetIndex:0},
 };
 let tiltFrame=0;
+let dom=null;
 
-state.pages=pagesData;
-// NO back cover - book ends with last two photos
-dom.loadingCover.style.backgroundImage=`url("${pagesData[0].src}")`;
+function initDOM(){
+  return {
+    app:document.getElementById('app'),loadingState:document.getElementById('loadingState'),
+    loadingCover:document.getElementById('loadingCover'),stageCard:document.getElementById('stageCard'),
+    stageViewport:document.getElementById('stageViewport'),bookRoot:document.getElementById('bookRoot'),
+    bookFrame:document.getElementById('bookFrame'),closedBook:document.getElementById('closedBook'),
+    coverWrapper:document.getElementById('coverWrapper'),coverPage:document.getElementById('coverPage'),
+    coverPageBack:document.getElementById('coverPageBack'),coverCta:document.getElementById('coverCta'),
+    spreadBook:document.getElementById('spreadBook'),currentSpread:document.getElementById('currentSpread'),
+    underSpread:document.getElementById('underSpread'),currentLeftFront:document.getElementById('currentLeftFront'),
+    currentLeftBack:document.getElementById('currentLeftBack'),currentRightFront:document.getElementById('currentRightFront'),
+    currentRightBack:document.getElementById('currentRightBack'),underLeftFront:document.getElementById('underLeftFront'),
+    underLeftBack:document.getElementById('underLeftBack'),underRightFront:document.getElementById('underRightFront'),
+    underRightBack:document.getElementById('underRightBack'),peelNext:document.getElementById('peelNext'),
+    peelNextSheet:document.getElementById('peelNextSheet'),peelNextFront:document.getElementById('peelNextFront'),
+    peelNextBack:document.getElementById('peelNextBack'),peelPrev:document.getElementById('peelPrev'),
+    peelPrevSheet:document.getElementById('peelPrevSheet'),peelPrevFront:document.getElementById('peelPrevFront'),
+    peelPrevBack:document.getElementById('peelPrevBack'),cornerPrevTop:document.getElementById('cornerPrevTop'),
+    cornerPrevBottom:document.getElementById('cornerPrevBottom'),cornerNextTop:document.getElementById('cornerNextTop'),
+    cornerNextBottom:document.getElementById('cornerNextBottom'),btnPrev:document.getElementById('btnPrev'),
+    btnNext:document.getElementById('btnNext'),btnZoomOut:null,btnZoomIn:null,btnZoomReset:null,
+    btnFullscreen:null,zoomIndicator:document.getElementById('zoomIndicator'),
+    pageIndicator:document.getElementById('pageIndicator'),progressFill:document.getElementById('progressFill'),
+    statusHint:document.getElementById('statusHint'),btnPageSelector:null,pageSelectorPanel:null,pageSelectorGrid:null,
+  };
+}
 
-bindEvents();
-syncLayout(true);
-applyStaticMetrics();
-// NO applyOpenState here - let openBook() handle initial state
-
-requestAnimationFrame(()=>{
-  state.bookState='closed';
-  dom.app.dataset.ready='true';
-  dom.app.dataset.bookState='closed';
-  applyOpenState(0,'front'); // Apply AFTER state is set
-  renderCurrentView();
-  updateUi(true);
-  calculateScale();
-});
+function bootstrap(){
+  dom=initDOM();
+  if(!dom.coverPage||!dom.coverCta){console.error('CRITICAL: DOM elements missing');return;}
+  
+  state.pages=pagesData;
+  dom.loadingCover.style.backgroundImage=`url("${pagesData[0].src}")`;
+  
+  syncLayout(true);
+  applyStaticMetrics();
+  
+  requestAnimationFrame(()=>{
+    state.bookState='closed';
+    dom.app.dataset.ready='true';
+    dom.app.dataset.bookState='closed';
+    applyOpenState(0,'front');
+    renderCurrentView();
+    updateUi(true);
+    calculateScale();
+    bindEvents();
+  });
+}
 
 function bindEvents(){
+  if(!dom.coverPage||!dom.coverCta)return;
   dom.coverPage.addEventListener('click',()=>openBook());
   dom.coverCta.addEventListener('click',()=>openBook());
   dom.btnPrev.addEventListener('click',()=>goBackward());
@@ -1018,6 +1025,10 @@ async function animateValue({duration,onUpdate}){
     rafId=requestAnimationFrame(frame);
   });
 }
+
+// Start the app when DOM is ready
+if(document.readyState==='loading'){document.addEventListener('DOMContentLoaded',bootstrap);}
+else{bootstrap();}
 
 })();
 
