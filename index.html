@@ -527,6 +527,14 @@ function performAtomicSwap(direction,targetIndex){
   // Step 1: Get new views for active layer (next spread after turn completes)
   const fv=getView(targetIndex),fb=getStaticBackPages(targetIndex);
   
+  // CRITICAL FIX: Update textures on buffer layer BEFORE making it visible
+  // This prevents any frame where stale data could be shown
+  setSheetTextures(dom.underLeftFront,dom.underLeftBack,fv.left,fb.leftBack);
+  setSheetTextures(dom.underRightFront,dom.underRightBack,fv.right,fb.rightBack);
+  
+  // Force style recalc to ensure textures are applied before visibility change
+  void dom.underLeftFront.offsetWidth;
+  
   // Step 2: ATOMIC swap - hide old active, show buffer as new active (SAME RAF, NO gap)
   // Buffer layer already has correct content from prepareBufferLayer()
   dom.currentSpread.classList.remove('active-layer');
@@ -555,22 +563,17 @@ function performAtomicSwap(direction,targetIndex){
   dom.currentRightBack = dom.underRightBack;
   dom.underRightBack = tempRightBack;
   
-  // Step 4: Update textures on NEW active layer (formerly buffer, now visible)
-  // This happens AFTER swap, so user sees the new content immediately
-  setSheetTextures(dom.currentLeftFront,dom.currentLeftBack,fv.left,fb.leftBack);
-  setSheetTextures(dom.currentRightFront,dom.currentRightBack,fv.right,fb.rightBack);
-  
-  // Step 5: Clear OLD buffer layer textures (now hidden, prevents stale data)
+  // Step 4: Clear OLD buffer layer textures (now hidden, prevents stale data)
   setSheetTextures(dom.underLeftFront,dom.underLeftBack,null,null);
   setSheetTextures(dom.underRightFront,dom.underRightBack,null,null);
   
-  // Step 6: Reset state
+  // Step 5: Reset state
   state.currentIndex=targetIndex;
   state.animating=false;
   dom.app.dataset.turning='false';
   state.lastRenderedKey=[state.bookState,state.layout,state.currentIndex,state.closedFace,state.pages.length].join(':');
   
-  // Step 7: Cleanup turn layer visuals
+  // Step 6: Cleanup turn layer visuals
   resetTurnVisuals();
   updateUi(true);
 }
