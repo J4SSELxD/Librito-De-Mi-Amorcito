@@ -906,81 +906,151 @@
     .help-modal {
       position: fixed;
       inset: 0;
-      background: rgba(0, 0, 0, 0.85);
+      background: linear-gradient(135deg, rgba(10, 8, 7, 0.92) 0%, rgba(26, 20, 18, 0.88) 100%);
+      backdrop-filter: blur(8px);
       display: flex;
       align-items: center;
       justify-content: center;
       z-index: 1000;
       padding: 20px;
+      animation: fadeIn 0.3s ease-out;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; }
+      to { opacity: 1; }
     }
 
     .help-modal-content {
-      background: linear-gradient(135deg, #1a1412 0%, #2a1f1c 100%);
-      border: 1px solid var(--panel-border);
-      border-radius: 16px;
-      padding: 32px;
-      max-width: 500px;
+      background: linear-gradient(145deg, #2a1f1c 0%, #1a1412 100%);
+      border: 2px solid rgba(243, 197, 168, 0.3);
+      border-radius: 24px;
+      padding: 40px 36px;
+      max-width: 540px;
       width: 100%;
       max-height: 85vh;
       overflow-y: auto;
-      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+      box-shadow: 
+        0 25px 80px rgba(0, 0, 0, 0.6),
+        0 0 0 1px rgba(243, 197, 168, 0.1),
+        inset 0 1px 0 rgba(255, 255, 255, 0.1);
+      animation: slideUp 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+      position: relative;
+    }
+
+    @keyframes slideUp {
+      from { 
+        opacity: 0;
+        transform: translateY(30px) scale(0.95);
+      }
+      to { 
+        opacity: 1;
+        transform: translateY(0) scale(1);
+      }
     }
 
     .help-modal-content h2 {
-      margin: 0 0 24px 0;
-      font-size: 24px;
-      color: var(--accent);
+      margin: 0 0 28px 0;
+      font-size: 28px;
+      background: linear-gradient(135deg, var(--accent) 0%, var(--accent-strong) 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
       text-align: center;
+      font-weight: 700;
+      letter-spacing: -0.5px;
     }
 
     .help-section {
-      margin-bottom: 20px;
+      margin-bottom: 24px;
+      padding: 20px;
+      background: rgba(255, 255, 255, 0.03);
+      border-radius: 16px;
+      border: 1px solid rgba(255, 255, 255, 0.06);
+    }
+
+    .help-section:last-child {
+      margin-bottom: 0;
     }
 
     .help-section h3 {
-      margin: 0 0 12px 0;
-      font-size: 16px;
+      margin: 0 0 14px 0;
+      font-size: 17px;
       color: var(--accent-strong);
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      gap: 8px;
     }
 
     .help-section ul {
       margin: 0;
-      padding-left: 20px;
-      list-style-type: disc;
+      padding-left: 24px;
+      list-style-type: none;
     }
 
     .help-section li {
-      margin-bottom: 8px;
+      margin-bottom: 12px;
       color: var(--text);
-      line-height: 1.5;
+      line-height: 1.6;
+      position: relative;
+      padding-left: 8px;
+    }
+
+    .help-section li::before {
+      content: '•';
+      position: absolute;
+      left: -18px;
+      color: var(--accent);
+      font-weight: bold;
+    }
+
+    .help-section li:last-child {
+      margin-bottom: 0;
     }
 
     .help-section li strong {
       color: var(--accent);
+      font-weight: 600;
+    }
+
+    .help-icon {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 28px;
+      height: 28px;
+      background: linear-gradient(135deg, var(--accent) 0%, var(--accent-strong) 100%);
+      border-radius: 8px;
+      font-size: 16px;
+      margin-right: 6px;
     }
 
     .help-accept-button {
       display: block;
       width: 100%;
-      padding: 14px 24px;
-      margin-top: 24px;
+      padding: 16px 24px;
+      margin-top: 28px;
       background: linear-gradient(135deg, var(--accent) 0%, var(--accent-strong) 100%);
       color: #1a1412;
       border: none;
-      border-radius: 8px;
-      font-size: 16px;
-      font-weight: 600;
+      border-radius: 12px;
+      font-size: 17px;
+      font-weight: 700;
       cursor: pointer;
-      transition: transform 0.2s, box-shadow 0.2s;
+      transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+      box-shadow: 0 4px 20px rgba(243, 197, 168, 0.3);
+      letter-spacing: -0.3px;
     }
 
     .help-accept-button:hover {
-      transform: translateY(-2px);
-      box-shadow: 0 8px 20px rgba(243, 197, 168, 0.3);
+      transform: translateY(-3px);
+      box-shadow: 0 12px 35px rgba(243, 197, 168, 0.45);
     }
 
     .help-accept-button:active {
-      transform: translateY(0);
+      transform: translateY(-1px);
+      box-shadow: 0 6px 20px rgba(243, 197, 168, 0.35);
     }
   </style>
 </head>
@@ -1169,7 +1239,7 @@ const PAGES = [
       maxZoom: 2.4,
       zoomStep: 0.16,
       coverDuration: 680,
-      closeDuration: 900,  // Aumentado de 600ms a 900ms para que el cierre sea más lento y controlado
+      closeDuration: 1200,  // Aumentado para que el cierre sea más suave y perceptible
       turnDuration: 640,
       dragThreshold: 12,
       dragCommit: 0.42,
@@ -2142,7 +2212,7 @@ const PAGES = [
       if (!state.gesture.active) {
         // DETECCIÓN FORZADA DE GESTO VERTICAL PARA CERRAR
         const isMobile = window.innerWidth < 768;
-        const verticalThreshold = isMobile ? 25 : 30;
+        const verticalThreshold = isMobile ? 35 : 40; // Aumentado para requerir más movimiento
         
         // PRIORIDAD 1: Gesto vertical hacia abajo para cerrar
         if (state.isOpen && dy > verticalThreshold && dy > Math.abs(dx)) {
@@ -2203,7 +2273,7 @@ const PAGES = [
       if (state.gesture.active && state.transition) {
         let progress = 0;
         if (state.gesture.isVertical && state.gesture.type === 'cover-close') {
-          const closeDistance = window.innerHeight * 0.25;
+          const closeDistance = window.innerHeight * 0.35; // Aumentado de 0.25 a 0.35 para requerir más recorrido
           progress = clamp(dy / Math.max(1, closeDistance), 0, 1);
         } else if (state.transition) {
           const turnWidth = state.gesture.rectWidth * 0.58;
@@ -2267,7 +2337,7 @@ const PAGES = [
 
     function resolveGestureActivation(side, dx, dy) {
       const isMobile = window.innerWidth < 768;
-      const verticalThreshold = isMobile ? 15 : 20;
+      const verticalThreshold = isMobile ? 35 : 40; // Aumentado para que no se active tan fácil
       const horizontalThreshold = SETTINGS.dragThreshold;
       
       // 1. DETECTAR GESTO VERTICAL HACIA ABAJO PARA CERRAR (PRIORIDAD ABSOLUTA)
@@ -2329,9 +2399,9 @@ const PAGES = [
 
     function computeGestureProgress(gesture, dx, dy) {
       // Para gestos verticales de cierre, usar el movimiento vertical (dy)
-      // Referencia: 20% del alto de la pantalla como distancia máxima necesaria
+      // Referencia: 35% del alto de la pantalla como distancia máxima necesaria (aumentado de 20%)
       if (gesture.isVertical && gesture.type === 'cover-close') {
-        const closeDistance = window.innerHeight * 0.20;
+        const closeDistance = window.innerHeight * 0.35;
         return clamp(dy / Math.max(1, closeDistance), 0, 1);
       }
       
