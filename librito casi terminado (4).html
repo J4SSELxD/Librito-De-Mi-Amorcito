@@ -50,6 +50,8 @@
       overflow: hidden;
       background: #0a0807;
       color: var(--text);
+      -webkit-font-smoothing: antialiased;
+      text-rendering: optimizeSpeed;
     }
 
     body {
@@ -72,6 +74,7 @@
       overflow: hidden;
       isolation: isolate;
       background: #0a0807;
+      contain: strict;
     }
 
     .app-shell.is-pseudo-fullscreen,
@@ -159,7 +162,7 @@
       font-weight: 700;
       letter-spacing: 0.02em;
       cursor: pointer;
-      transition: border-color 150ms ease, background 150ms ease, transform 150ms ease;
+      transition: border-color 100ms ease, background 100ms ease, transform 100ms ease;
     }
     .control-button:hover,
     .control-button:focus-visible {
@@ -233,7 +236,7 @@
       width: 0;
       border-radius: inherit;
       background: var(--accent);
-      transition: width 200ms ease;
+      transition: width 150ms ease;
     }
 
     .page-selector {
@@ -273,7 +276,7 @@
       flex-direction: column;
       gap: 10px;
       cursor: pointer;
-      transition: border-color 150ms ease;
+      transition: border-color 100ms ease;
       text-align: left;
     }
     .selector-card:hover,
@@ -344,6 +347,7 @@
       overflow: hidden;
       touch-action: pan-y pinch-zoom;
       z-index: 10;
+      contain: layout style;
     }
 
     .app-viewer.is-zoomed {
@@ -381,7 +385,6 @@
       height: var(--page-height);
       transform: translate(-50%, -50%);
       transform-origin: center center;
-      will-change: transform;
     }
 
     .book-root {
@@ -396,7 +399,7 @@
       transform-style: preserve-3d;
       user-select: none;
       -webkit-user-select: none;
-      filter: drop-shadow(0 24px 32px rgba(0,0,0,0.55));
+      contain: layout;
     }
 
     .book-root::before {
@@ -451,7 +454,7 @@
     .cover-face {
       position: relative;
       overflow: hidden;
-      border-radius: 20px;
+      border-radius: 12px;
       background: #f5efe6;
       box-shadow: inset 0 0 0 1px rgba(116,82,59,0.10);
       backface-visibility: hidden;
@@ -471,9 +474,7 @@
       50%       { translate: 0 -6px; }
     }
     .book-root.is-idle {
-      animation: book-float 3.8s ease-in-out infinite;
-      animation-fill-mode: both;
-      will-change: translate;
+      animation: none;
     }
     .book-root.is-turning,
     .book-root:not(.is-idle) {
@@ -538,7 +539,6 @@
       position: absolute;
       inset: 0;
       transform-style: preserve-3d;
-      will-change: transform;
     }
 
     .turn-layer[data-direction='forward'] .turn-card {
@@ -553,19 +553,11 @@
       position: absolute;
       inset: 0;
       backface-visibility: hidden;
-      box-shadow:
-        0 20px 32px rgba(0,0,0,0.26),
-        inset 0 0 0 1px rgba(116,82,59,0.08);
+      box-shadow: 0 8px 20px rgba(0,0,0,0.22);
     }
 
     .turn-sheen-overlay {
-      position: absolute;
-      inset: 0;
-      pointer-events: none;
-      border-radius: inherit;
-      background: linear-gradient(105deg, transparent 20%, rgba(255,255,255,0.15) 50%, transparent 80%);
-      opacity: 0;
-      will-change: opacity;
+      display: none;
     }
 
     .turn-face.back {
@@ -594,7 +586,6 @@
         translate3d(calc((var(--page-width) / 2 + var(--page-gap) / 2) * var(--cover-progress)), 0, calc(26px * var(--cover-progress)))
         rotateY(calc(var(--cover-progress) * -180deg));
       opacity: calc(1 - var(--cover-progress) * 0.98);
-      will-change: transform, opacity;
       cursor: pointer;
       border: 0;
       padding: 0;
@@ -610,20 +601,16 @@
       position: absolute;
       inset: 0;
       backface-visibility: hidden;
-      box-shadow:
-        0 24px 54px rgba(0, 0, 0, 0.24),
-        inset 0 0 0 1px rgba(116, 82, 59, 0.08);
+      box-shadow: 0 8px 24px rgba(0,0,0,0.22);
     }
 
     .cover-face::after {
-      background:
-        linear-gradient(108deg, rgba(255, 255, 255, 0.12), transparent 18%, transparent 70%, rgba(255, 255, 255, 0.04)),
-        linear-gradient(180deg, rgba(255, 255, 255, 0.06), transparent 16%, transparent 84%, rgba(35, 21, 14, 0.08));
+      display: none;
     }
 
     .cover-face.back {
       transform: rotateY(180deg);
-      background: linear-gradient(180deg, #fffdf7, #f1e7d9);
+      background: #f5ede0;
     }
 
     .cover-face.back img {
@@ -634,9 +621,7 @@
     .app-shell.is-fullscreen .footer-bar,
     .app-shell.is-pseudo-fullscreen .toolbar,
     .app-shell.is-pseudo-fullscreen .footer-bar {
-      box-shadow:
-        0 22px 58px rgba(0, 0, 0, 0.34),
-        inset 0 1px 0 rgba(255, 255, 255, 0.07);
+      box-shadow: 0 4px 16px rgba(0,0,0,0.28);
     }
 
     .app-shell.is-fullscreen.is-controls-hidden .toolbar,
@@ -661,9 +646,8 @@
     .toolbar,
     .footer-bar {
       transition:
-        opacity 280ms ease,
-        transform 280ms ease,
-        box-shadow 150ms ease;
+        opacity 120ms ease,
+        transform 120ms ease;
     }
 
     @media (max-width: 920px) {
@@ -764,12 +748,17 @@
       .page-card,
       .turn-face,
       .cover-face {
-        border-radius: 14px;
+        border-radius: 10px;
       }
 
       .book-spine {
         display: none;
       }
+
+      .book-root { perspective: none; transform-style: flat; }
+      .turn-card { transform-style: flat; }
+      .turn-face { backface-visibility: visible; }
+      .cover-sheet { transform-style: flat; }
     }
 
     .book-root.is-turning .turn-face::before,
@@ -830,7 +819,7 @@
         transform: translateY(-50%);
         z-index: 95;
         opacity: 0.7;
-        transition: opacity 200ms ease;
+        transition: opacity 120ms ease;
       }
 
       .nav-button-prev:hover,
@@ -938,11 +927,9 @@
                 <div class='turn-card' id='turnCard'>
                   <article class='turn-face front' id='turnFront'>
                     <div class='turn-media'><img alt='' loading="lazy"></div>
-                    <div class="turn-sheen-overlay" aria-hidden="true"></div>
                   </article>
                   <article class='turn-face back' id='turnBack'>
                     <div class='turn-media'><img alt='' loading="lazy"></div>
-                    <div class="turn-sheen-overlay" aria-hidden="true"></div>
                   </article>
                 </div>
               </div>
