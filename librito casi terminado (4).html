@@ -1012,8 +1012,6 @@ const PAGES = [
       turnCard: document.getElementById('turnCard'),
       turnFront: document.getElementById('turnFront'),
       turnBack: document.getElementById('turnBack'),
-      sheenFront: document.querySelector('#turnFront .turn-sheen-overlay'),
-      sheenBack: document.querySelector('#turnBack .turn-sheen-overlay'),
       coverSheet: document.getElementById('coverSheet'),
       coverFront: document.getElementById('coverFront'),
       coverBack: document.getElementById('coverBack'),
@@ -1308,8 +1306,6 @@ const PAGES = [
         dom.bookRoot.style.setProperty('--turn-roll', '0deg');
         dom.bookRoot.style.setProperty('--turn-scale', '1');
         dom.bookRoot.style.setProperty('--turn-shadow', '0');
-        if (dom.sheenFront) dom.sheenFront.style.opacity = '0';
-        if (dom.sheenBack)  dom.sheenBack.style.opacity  = '0';
         return;
       }
 
@@ -1381,8 +1377,6 @@ const PAGES = [
       s.setProperty('--turn-roll',    roll.toFixed(3)  + 'deg');
       s.setProperty('--turn-scale',   scaleX.toFixed(4));
       s.setProperty('--turn-shadow',  clamp(crest, 0, 1).toFixed(3));
-      if (dom.sheenFront) dom.sheenFront.style.opacity = crest.toFixed(3);
-      if (dom.sheenBack)  dom.sheenBack.style.opacity  = (crest * 0.6).toFixed(3);
     }
 
     function updateUI() {
