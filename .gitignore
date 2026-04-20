@@ -1,5 +1,27 @@
-The provided input shows a modified file named `'\"librito'` which appears to be a string literal with escaped quotes rather than an actual file path. This doesn't represent any real file changes that would require gitignore rules.
+```
+# Compiled and build artifacts
+*.pyc
+__pycache__/
 
-Since there are no actual file changes containing build artifacts, dependency directories, editor files, or other ignorable patterns, no .gitignore rules are needed.
+# Dependencies
+.venv/
+venv/
+node_modules/
 
-(No output)
+# Logs and temp files
+*.log
+*.tmp
+*.swp
+
+# Environment
+.env
+.env.local
+.env.*
+
+# Editors
+.vscode/
+.idea/
+
+# Original rules preserved
+*.log
+```

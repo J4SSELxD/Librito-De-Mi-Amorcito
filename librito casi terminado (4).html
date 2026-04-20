@@ -260,8 +260,10 @@
 
     .selector-grid {
       display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+      grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
       gap: 12px;
+      max-height: 70vh;
+      overflow-y: auto;
     }
 
     .selector-card {
@@ -906,6 +908,11 @@
                 </article>
                 <article class='page-card page-right' id='currentRight'>
                   <div class='page-media'><img alt=''></div>
+                  <!-- CORRECCIÓN: Botón para cerrar libro en últimas páginas -->
+                  <button class='close-book-btn' id='closeBookBtn' type='button' aria-label='Cerrar libro' hidden>
+                    <svg viewBox='0 0 24 24' aria-hidden='true'><path d='M18 6L6 18M6 6l12 12'></path></svg>
+                    <span>Cerrar libro</span>
+                  </button>
                 </article>
               </div>
 
@@ -990,6 +997,13 @@ const PAGES = [
       edgeRatio: 0.24,
       fitPadding: 28,
     };
+    
+    // Ajustes dinámicos para móvil
+    function updateSettingsForMobile() {
+      const isMobile = window.innerWidth < 768;
+      SETTINGS.dragThreshold = isMobile ? 8 : 12;
+      SETTINGS.edgeRatio = isMobile ? 0.35 : 0.24;
+    }
 
     SETTINGS.spreadWidth = SETTINGS.pageWidth * 2 + SETTINGS.pageGap;
 
@@ -1026,6 +1040,7 @@ const PAGES = [
       progressFill: document.getElementById('progressFill'),
       prevButton: document.getElementById('prevButton'),
       nextButton: document.getElementById('nextButton'),
+      closeBookBtn: document.getElementById('closeBookBtn'),
     };
 
     const pagesByNumber = new Map(PAGES.map((page) => [page.number, page]));
@@ -1075,6 +1090,7 @@ const PAGES = [
       pinch: null,
       bound: false,
       selectorItems: [],
+      coverClicked: false,
     };
 
     let resizeObserver = null;
@@ -1168,10 +1184,8 @@ const PAGES = [
     }
 
     function buildSelector() {
-      // OPTIMIZACIÓN: Solo generar markup para las primeras 3 vistas inicialmente
-      // El resto se genera bajo demanda (lazy DOM injection)
-      const initialViewsCount = Math.min(3, VIEWS.length);
-      const markup = VIEWS.slice(0, initialViewsCount).map((view) => {
+      // CORRECCIÓN: Generar TODAS las vistas del selector inmediatamente
+      const markup = VIEWS.map((view) => {
         if (view.page === 0) {
           return [
             '<button class="selector-card" type="button" data-action="jump" data-page="0">',
@@ -1200,7 +1214,7 @@ const PAGES = [
       }).join('');
       dom.selectorGrid.innerHTML = markup;
       state.selectorItems = Array.from(dom.selectorGrid.querySelectorAll('.selector-card'));
-      state.selectorLastBuiltIndex = initialViewsCount - 1;
+      state.selectorLastBuiltIndex = VIEWS.length - 1;
     }
 
     // OPTIMIZACIÓN: Generar vistas del selector bajo demanda
@@ -1252,6 +1266,7 @@ const PAGES = [
       dom.viewer.addEventListener('wheel', onWheel, { passive: false });
       document.addEventListener('fullscreenchange', onFullscreenChange);
       resizeObserver = new ResizeObserver(() => {
+        updateSettingsForMobile();
         measureViewer();
         scheduleRender();
       });
@@ -1470,6 +1485,12 @@ const PAGES = [
         const itemPage = Number(item.dataset.page);
         item.classList.toggle('is-active', itemPage === uiPage);
       });
+
+      // CORRECCIÓN: Mostrar botón de cerrar libro en las últimas dos páginas
+      if (dom.closeBookBtn) {
+        const showCloseBtn = state.isOpen && state.currentPage >= 8 && !state.isAnimating;
+        dom.closeBookBtn.hidden = !showCloseBtn;
+      }
     }
 
     function getStatusText() {
@@ -1511,6 +1532,14 @@ const PAGES = [
     }
 
     function onDocumentPointerDown(event) {
+      // CORRECCIÓN: Permitir clic en la portada para abrir el libro (laptop y móvil)
+      if (!state.isOpen && !state.selectorOpen && event.target.closest('#bookRoot')) {
+        // Solo abrir si no es un gesto de arrastre (se manejará en onPointerUp)
+        // Marcamos que hubo un pointerdown en la portada para procesarlo luego
+        state.coverClicked = true;
+        return;
+      }
+      
       if (!state.selectorOpen) {
         return;
       }
@@ -1639,12 +1668,19 @@ const PAGES = [
         case 'jump':
           navigateTo(Number(source.dataset.page));
           break;
+        case 'close-book':
+          closeBook();
+          break;
       }
     }
 
     function toggleSelector(force) {
       const next = typeof force === 'boolean' ? force : !state.selectorOpen;
       state.selectorOpen = next;
+      if (next) {
+        // Forzar construcción completa de todas las vistas al abrir
+        ensureSelectorViewsBuilt(VIEWS.length + 1);
+      }
       scheduleRender();
     }
 
@@ -1915,6 +1951,16 @@ const PAGES = [
       }
       
       updatePinchState();
+
+      // CORRECCIÓN: Abrir libro al hacer clic en portada (si no hubo arrastre)
+      if (state.coverClicked && !state.gesture && !state.isOpen) {
+        state.coverClicked = false;
+        if (performance.now() >= state.suppressClickUntil) {
+          openBook(2);
+        }
+        return;
+      }
+      state.coverClicked = false;
 
       if (!state.gesture || state.gesture.pointerId !== event.pointerId) {
         return;
@@ -2216,6 +2262,7 @@ const PAGES = [
     }
 
     function init() {
+      updateSettingsForMobile();
       applyMetrics();
       buildSelector();
       bindEvents();
