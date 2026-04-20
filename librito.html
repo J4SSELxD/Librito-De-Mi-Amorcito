@@ -907,21 +907,22 @@
 
     /* Modal de Ayuda */
     .help-modal {
+      display: none;
       position: fixed;
       inset: 0;
       background: linear-gradient(135deg, rgba(10, 8, 7, 0.92) 0%, rgba(26, 20, 18, 0.88) 100%);
       backdrop-filter: blur(8px);
-      display: flex;
       align-items: center;
       justify-content: center;
       z-index: 1000;
       padding: 20px;
-      animation: fadeIn 0.3s ease-out;
+      opacity: 0;
+      transition: opacity 0.4s ease;
     }
-
-    @keyframes fadeIn {
-      from { opacity: 0; }
-      to { opacity: 1; }
+    
+    .help-modal.active {
+      display: flex;
+      opacity: 1;
     }
 
     .help-modal-content {
@@ -1186,8 +1187,8 @@
     </footer>
 
     <!-- Modal de Ayuda/Guía -->
-    <div id='helpModal' class='help-modal' style='display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.75); backdrop-filter: blur(8px); z-index: 10000; justify-content: center; align-items: center; opacity: 0; pointer-events: none; transition: opacity 0.4s ease;'>
-      <div class='help-modal-content'>
+    <div id='helpModal' class='help-modal'>
+      <div class='help-modal-content' style='pointer-events: auto;'>
         <h2>✨ Cómo Disfrutar Tu Libro ✨</h2>
         
         <div class='help-section'>
@@ -1533,41 +1534,40 @@ const PAGES = [
       const helpModal = document.getElementById('helpModal');
       const helpAcceptButton = document.getElementById('helpAcceptButton');
       
+      function openHelpModal() {
+        if (helpModal) {
+          helpModal.classList.add('active');
+          setTimeout(() => {
+            helpModal.querySelector('.help-modal-content').style.transform = 'scale(1)';
+          }, 10);
+        }
+      }
+      
+      function closeHelpModal() {
+        if (helpModal) {
+          helpModal.classList.remove('active');
+          helpModal.querySelector('.help-modal-content').style.transform = 'scale(0.9)';
+        }
+      }
+      
       if (helpButton) {
-        helpButton.addEventListener('click', () => {
-          if (helpModal) {
-            helpModal.style.display = 'flex';
-            setTimeout(() => {
-              helpModal.style.opacity = '1';
-              helpModal.querySelector('.help-modal-content').style.transform = 'scale(1)';
-            }, 10);
-          }
-        });
+        helpButton.addEventListener('click', openHelpModal);
       }
       
       if (helpAcceptButton) {
-        helpAcceptButton.addEventListener('click', () => {
-          if (helpModal) {
-            helpModal.style.opacity = '0';
-            helpModal.querySelector('.help-modal-content').style.transform = 'scale(0.9)';
-            setTimeout(() => {
-              helpModal.style.display = 'none';
-            }, 500);
-          }
-        });
+        helpAcceptButton.addEventListener('click', closeHelpModal);
       }
       
       if (helpModal) {
         helpModal.addEventListener('click', (e) => {
           if (e.target === helpModal) {
-            helpModal.style.opacity = '0';
-            helpModal.querySelector('.help-modal-content').style.transform = 'scale(0.9)';
-            setTimeout(() => {
-              helpModal.style.display = 'none';
-            }, 500);
+            closeHelpModal();
           }
         });
       }
+      
+      // Mostrar modal al inicio
+      setTimeout(openHelpModal, 500);
       
       resizeObserver = new ResizeObserver(() => {
         updateSettingsForMobile();
@@ -2679,18 +2679,6 @@ const PAGES = [
       onFullscreenChange();
       scheduleRender();
       warmImages();
-      
-      // Mostrar modal de ayuda al inicio (después de un breve delay)
-      setTimeout(() => {
-        const helpModal = document.getElementById('helpModal');
-        if (helpModal) {
-          helpModal.style.display = 'flex';
-          setTimeout(() => {
-            helpModal.style.opacity = '1';
-            helpModal.querySelector('.help-modal-content').style.transform = 'scale(1)';
-          }, 10);
-        }
-      }, 500);
     }
 
     init();
