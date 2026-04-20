@@ -1064,8 +1064,8 @@ const PAGES = [
     // Ajustes dinámicos para móvil
     function updateSettingsForMobile() {
       const isMobile = window.innerWidth < 768;
-      SETTINGS.dragThreshold = isMobile ? 6 : 12;
-      SETTINGS.edgeRatio = isMobile ? 0.40 : 0.24;
+      SETTINGS.dragThreshold = isMobile ? 3 : 12;
+      SETTINGS.edgeRatio = isMobile ? 0.50 : 0.24;
     }
 
     SETTINGS.spreadWidth = SETTINGS.pageWidth * 2 + SETTINGS.pageGap;
@@ -1552,7 +1552,7 @@ const PAGES = [
       // CORRECCIÓN: Mostrar botón de cerrar libro en las últimas dos páginas (páginas 8 y 10)
       if (dom.closeBookBtn) {
         const totalPages = 10;
-        const showCloseBtn = state.isOpen && state.currentPage >= 8 && !state.isAnimating;
+        const showCloseBtn = state.isOpen && state.currentPage >= 8 && state.currentPage % 2 === 0 && !state.isAnimating;
         dom.closeBookBtn.hidden = !showCloseBtn;
         dom.closeBookBtn.style.display = showCloseBtn ? 'inline-flex' : 'none';
         dom.closeBookBtn.style.opacity = showCloseBtn ? '1' : '0';
@@ -1980,11 +1980,17 @@ const PAGES = [
         return;
       }
 
+      // Limpiar coverClicked si hay movimiento significativo (evita falsos positivos)
+      if (Math.abs(event.clientX - state.gesture.startX) > 3 || Math.abs(event.clientY - state.gesture.startY) > 3) {
+        state.coverClicked = false;
+      }
+
       const dx = event.clientX - state.gesture.startX;
       const dy = event.clientY - state.gesture.startY;
 
       if (!state.gesture.active) {
-        if (Math.abs(dx) < SETTINGS.dragThreshold || Math.abs(dx) < Math.abs(dy)) {
+        // Permitir gestos ligeramente diagonales (80% horizontal es suficiente)
+        if (Math.abs(dx) < SETTINGS.dragThreshold || Math.abs(dx) < Math.abs(dy) * 0.8) {
           return;
         }
         const activation = resolveGestureActivation(state.gesture.side, dx);
@@ -2077,8 +2083,12 @@ const PAGES = [
         };
       }
       if (side === 'left' && dx > SETTINGS.dragThreshold && state.isOpen) {
-        // Permitir cierre de libro desde páginas finales (2, 8, 10) con gesto lateral izquierdo
-        if (state.currentPage === 2 || state.currentPage === 8 || state.currentPage === 10) {
+        // Permitir cierre de libro desde páginas finales (2, 8, 9, 10, 11) con gesto lateral izquierdo
+        // Las vistas dobles son: 2-3, 4-5, 6-7, 8-9, 10-11. Cerrar desde 8-9 o 10-11
+        const canCloseFromPage = state.currentPage === 2 || 
+                                (state.currentPage >= 8 && state.currentPage <= 9) || 
+                                (state.currentPage >= 10 && state.currentPage <= 11);
+        if (canCloseFromPage) {
           return {
             type: 'cover-close',
             direction: -1,
