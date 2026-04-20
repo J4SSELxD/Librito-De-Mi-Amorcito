@@ -1065,7 +1065,8 @@ const PAGES = [
     function updateSettingsForMobile() {
       const isMobile = window.innerWidth < 768;
       SETTINGS.dragThreshold = isMobile ? 3 : 12;
-      SETTINGS.edgeRatio = isMobile ? 0.50 : 0.24;
+      // CORRECCIÓN: Reducir edgeRatio para crear zona central grande (70% centro, 15% cada lado)
+      SETTINGS.edgeRatio = isMobile ? 0.15 : 0.24;
     }
 
     SETTINGS.spreadWidth = SETTINGS.pageWidth * 2 + SETTINGS.pageGap;
@@ -2091,10 +2092,10 @@ const PAGES = [
           targetPage: getTargetPageForStep(1),
         };
       }
-      // Zona izquierda: diferenciar entre cierre (borde extremo) y retroceso de página (dentro del libro)
-      if (side === 'left' && dx > SETTINGS.dragThreshold && state.isOpen) {
-        // Solo cerrar si el gesto inició desde el borde extremo de la pantalla (< 15px)
-        const isEdgeGesture = state.gesture.startX < 15;
+      // Zona izquierda O central: permitir retroceso de página desde CUALQUIER parte del libro
+      if ((side === 'left' || side === 'center') && dx > SETTINGS.dragThreshold && state.isOpen) {
+        // Solo cerrar si el gesto inició desde el borde extremo de la pantalla (< 15px) Y estamos en zona izquierda
+        const isEdgeGesture = side === 'left' && state.gesture.startX < 15;
         
         if (isEdgeGesture) {
           // Permitir cierre de libro desde páginas finales con gesto desde el borde extremo
@@ -2111,7 +2112,7 @@ const PAGES = [
           }
         }
         
-        // Si no es gesto de borde O no puede cerrar, permitir retroceso de página
+        // Si no es gesto de borde O no puede cerrar, permitir retroceso de página desde cualquier zona
         if (state.currentPage > 2) {
           return {
             type: 'turn',
@@ -2120,6 +2121,15 @@ const PAGES = [
             targetPage: getTargetPageForStep(-1),
           };
         }
+      }
+      // CORRECCIÓN: Última página - permitir cierre desde cualquier punto con deslizamiento hacia la derecha
+      if (state.currentPage === 10 && dx > SETTINGS.dragThreshold && state.isOpen) {
+        return {
+          type: 'cover-close',
+          direction: -1,
+          fromPage: state.currentPage,
+          targetPage: 0,
+        };
       }
       return null;
     }
