@@ -456,18 +456,12 @@
       overflow: hidden;
       border-radius: 12px;
       background: #f5efe6;
-      box-shadow: inset 0 0 0 1px rgba(116,82,59,0.10);
+      box-shadow: 0 4px 12px rgba(0,0,0,0.15);
       backface-visibility: hidden;
+      content-visibility: auto;
+      contain-intrinsic-size: auto 540px;
     }
 /* Quitar pseudo-elementos decorativos de páginas */
-    .page-card::before,
-    .turn-face::before,
-    .cover-face::before { display: none; }
-    .page-card::after,
-    .turn-face::after,
-    .cover-face::after { display: none; }
-
-    .corner-hint { display: none; }
 
     @keyframes book-float {
       0%, 100% { translate: 0 0px; }
@@ -553,11 +547,7 @@
       position: absolute;
       inset: 0;
       backface-visibility: hidden;
-      box-shadow: 0 8px 20px rgba(0,0,0,0.22);
-    }
-
-    .turn-sheen-overlay {
-      display: none;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.15);
     }
 
     .turn-face.back {
@@ -749,6 +739,7 @@
       .turn-face,
       .cover-face {
         border-radius: 10px;
+        box-shadow: none;
       }
 
       .book-spine {
@@ -759,11 +750,6 @@
       .turn-card { transform-style: flat; }
       .turn-face { backface-visibility: visible; }
       .cover-sheet { transform-style: flat; }
-    }
-
-    .book-root.is-turning .turn-face::before,
-    .book-root.is-turning .page-card::before {
-      display: none;
     }
 
     @media (orientation: landscape) and (max-height: 500px) {
@@ -1170,7 +1156,7 @@ const PAGES = [
           return [
             '<button class="selector-card" type="button" data-action="jump" data-page="0">',
             '<span class="selector-preview is-cover">',
-            '<img src="' + view.pages[0].src + '" alt="Portada" loading="lazy">',
+            '<img src="' + view.pages[0].src + '" alt="Portada" fetchpriority="high">',
             '</span>',
             '<span class="selector-meta">',
             '<span class="selector-label">Portada</span>',
@@ -1619,10 +1605,14 @@ const PAGES = [
       
       if (zoom > 1 && !dom.viewer.classList.contains('is-zoomed')) {
         dom.viewer.classList.add('is-zoomed');
+        dom.zoomContainer.style.willChange = 'transform';
       } else if (zoom <= 1) {
         dom.viewer.classList.remove('is-zoomed');
         dom.zoomContainer.style.transformOrigin = 'center center';
         dom.zoomContainer.style.transform = 'translate(-50%, -50%)';
+        setTimeout(() => {
+          dom.zoomContainer.style.willChange = '';
+        }, 200);
       }
       
       if (centerX !== undefined && centerY !== undefined) {
