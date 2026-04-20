@@ -1195,7 +1195,6 @@ const PAGES = [
       viewportHeight: window.innerHeight,
       fitScale: 1,
       transition: null,
-      lastTransitionType: null,
       renderQueued: false,
       animationFrame: 0,
       suppressClickUntil: 0,
@@ -1367,8 +1366,7 @@ const PAGES = [
     function render() {
       updateScale();
       updatePages();
-      dom.bookRoot.classList.toggle('is-idle', !state.transition && state.isOpen && !state.isAnimating);
-      if (state.isAnimating === false) {
+      if (!state.isAnimating) {
         updateUI();
       }
     }
@@ -1391,164 +1389,126 @@ const PAGES = [
       }
     }
 
-    function updateStaticDOM(transition) {
-      const showOpenState = state.isOpen || Boolean(transition);
-      const coverProgress = transition
-        ? transition.type === 'cover-open'
-          ? transition.progress
-          : transition.type === 'cover-close'
-            ? 1 - transition.progress
-            : 1
-        : state.isOpen ? 1 : 0;
-
-      if (dom.bookRoot.dataset.coverHidden !== (coverProgress >= 0.999 ? 'true' : 'false'))
-        dom.bookRoot.dataset.coverHidden = coverProgress >= 0.999 ? 'true' : 'false';
-
-      const shouldBeTurning = transition && transition.type === 'turn';
-      if (dom.bookRoot.classList.contains('is-turning') !== shouldBeTurning)
-        dom.bookRoot.classList.toggle('is-turning', shouldBeTurning);
-
-      if (transition && transition.type === 'turn') {
-        if (dom.turnLayer.hidden) dom.turnLayer.hidden = false;
-        if (dom.turnLayer.getAttribute('aria-hidden') !== 'false')
-          dom.turnLayer.setAttribute('aria-hidden', 'false');
-        if (dom.spreadTarget.getAttribute('aria-hidden') !== 'false')
-          dom.spreadTarget.setAttribute('aria-hidden', 'false');
-        const directionLabel = transition.direction > 0 ? 'forward' : 'backward';
-        if (dom.turnLayer.dataset.direction !== directionLabel)
-          dom.turnLayer.dataset.direction = directionLabel;
-      } else {
-        if (!dom.turnLayer.hidden) dom.turnLayer.hidden = true;
-        if (dom.turnLayer.getAttribute('aria-hidden') !== 'true')
-          dom.turnLayer.setAttribute('aria-hidden', 'true');
-        if (dom.spreadTarget.getAttribute('aria-hidden') !== 'true')
-          dom.spreadTarget.setAttribute('aria-hidden', 'true');
-      }
-
-      const coverHiddenValue = showOpenState && coverProgress >= 0.999 ? 'true' : 'false';
-      if (dom.coverSheet.getAttribute('aria-hidden') !== coverHiddenValue)
-        dom.coverSheet.setAttribute('aria-hidden', coverHiddenValue);
-
-      if (dom.spreadCurrent.dataset.hideSide !== 'none')
-        dom.spreadCurrent.dataset.hideSide = 'none';
-    }
-
     function updatePages() {
       const transition = state.transition;
+
+      // Portada — siempre
       applySlot(dom.coverFront, getPage(1));
       applySlot(dom.coverBack, null);
 
+      // Progreso de portada y opacidad del spread
       const coverProgress = transition
-        ? transition.type === 'cover-open'
-          ? transition.progress
-          : transition.type === 'cover-close'
-            ? 1 - transition.progress
-            : 1
+        ? transition.type === 'cover-open'  ? transition.progress
+        : transition.type === 'cover-close' ? 1 - transition.progress
+        : 1
         : state.isOpen ? 1 : 0;
       const spreadOpacity = transition
-        ? transition.type === 'cover-open'
-          ? clamp(transition.progress * 1.08, 0, 1)
-          : transition.type === 'cover-close'
-            ? clamp(1 - transition.progress * 1.05, 0, 1)
-            : 1
+        ? transition.type === 'cover-open'  ? clamp(transition.progress * 1.08, 0, 1)
+        : transition.type === 'cover-close' ? clamp(1 - transition.progress * 1.05, 0, 1)
+        : 1
         : state.isOpen ? 1 : 0;
 
       dom.bookRoot.style.setProperty('--cover-progress', coverProgress.toFixed(4));
       dom.bookRoot.style.setProperty('--spread-opacity', spreadOpacity.toFixed(4));
+      dom.bookRoot.dataset.coverHidden = coverProgress >= 0.999 ? 'true' : 'false';
+      dom.bookRoot.classList.toggle('is-turning', Boolean(transition && transition.type === 'turn'));
+      dom.bookRoot.classList.toggle('is-idle', !transition && state.isOpen && !state.isAnimating);
+      dom.coverSheet.setAttribute('aria-hidden',
+        state.isOpen && coverProgress >= 0.999 ? 'true' : 'false');
 
-      const currentTransitionKey = transition ? transition.type + transition.direction : 'none';
-      if (state.lastTransitionType !== currentTransitionKey) {
-        state.lastTransitionType = currentTransitionKey;
-        updateStaticDOM(transition);
-      }
-
+      // Sin transición activa
       if (!transition) {
-        if (state.isOpen) {
-          const stableSpread = getSpread(state.currentPage);
-          applySlot(dom.currentLeft, stableSpread.left);
-          applySlot(dom.currentRight, stableSpread.right);
-        } else {
-          const firstSpread = getSpread(2);
-          applySlot(dom.currentLeft, firstSpread.left);
-          applySlot(dom.currentRight, firstSpread.right);
-        }
-        applySlot(dom.targetLeft, null);
+        dom.turnLayer.hidden = true;
+        dom.spreadTarget.setAttribute('aria-hidden', 'true');
+        dom.spreadCurrent.dataset.hideSide = 'none';
+        const spread = state.isOpen ? getSpread(state.currentPage) : getSpread(2);
+        applySlot(dom.currentLeft,  spread.left);
+        applySlot(dom.currentRight, spread.right);
+        applySlot(dom.targetLeft,  null);
         applySlot(dom.targetRight, null);
-        applySlot(dom.turnFront, null);
-        applySlot(dom.turnBack, null);
+        applySlot(dom.turnFront,   null);
+        applySlot(dom.turnBack,    null);
         dom.bookRoot.style.setProperty('--turn-rotate', '0deg');
         dom.bookRoot.style.setProperty('--turn-shift-x', '0px');
         dom.bookRoot.style.setProperty('--turn-lift', '0px');
         dom.bookRoot.style.setProperty('--turn-roll', '0deg');
         dom.bookRoot.style.setProperty('--turn-scale', '1');
         dom.bookRoot.style.setProperty('--turn-shadow', '0');
+        if (dom.sheenFront) dom.sheenFront.style.opacity = '0';
+        if (dom.sheenBack)  dom.sheenBack.style.opacity  = '0';
         return;
       }
 
+      // Apertura de portada
       if (transition.type === 'cover-open') {
-        const openSpread = getSpread(transition.targetPage);
-        applySlot(dom.currentLeft, openSpread.left);
-        applySlot(dom.currentRight, openSpread.right);
-        applySlot(dom.targetLeft, null);
+        dom.turnLayer.hidden = true;
+        dom.spreadTarget.setAttribute('aria-hidden', 'true');
+        const s = getSpread(transition.targetPage);
+        applySlot(dom.currentLeft,  s.left);
+        applySlot(dom.currentRight, s.right);
+        applySlot(dom.targetLeft,  null);
         applySlot(dom.targetRight, null);
-        applySlot(dom.turnFront, null);
-        applySlot(dom.turnBack, null);
+        applySlot(dom.turnFront,   null);
+        applySlot(dom.turnBack,    null);
         return;
       }
 
+      // Cierre de portada
       if (transition.type === 'cover-close') {
-        const closingSpread = getSpread(transition.fromPage);
-        applySlot(dom.currentLeft, closingSpread.left);
-        applySlot(dom.currentRight, closingSpread.right);
-        applySlot(dom.targetLeft, null);
+        dom.turnLayer.hidden = true;
+        dom.spreadTarget.setAttribute('aria-hidden', 'true');
+        const s = getSpread(transition.fromPage);
+        applySlot(dom.currentLeft,  s.left);
+        applySlot(dom.currentRight, s.right);
+        applySlot(dom.targetLeft,  null);
         applySlot(dom.targetRight, null);
-        applySlot(dom.turnFront, null);
-        applySlot(dom.turnBack, null);
+        applySlot(dom.turnFront,   null);
+        applySlot(dom.turnBack,    null);
         return;
       }
+
+      // Giro de página
+      dom.turnLayer.hidden = false;
+      dom.turnLayer.setAttribute('aria-hidden', 'false');
+      dom.spreadTarget.setAttribute('aria-hidden', 'false');
+      dom.turnLayer.dataset.direction = transition.direction > 0 ? 'forward' : 'backward';
 
       const fromSpread = getSpread(transition.fromPage);
-      const toSpread = getSpread(transition.targetPage);
-      const progress = transition.progress;
-      const crest = Math.sin(progress * Math.PI);
-      const angle = transition.direction > 0 ? -180 * progress : 180 * progress;
-      const shift = (transition.direction > 0 ? -1 : 1) * crest * SETTINGS.pageWidth * 0.034;
-      const lift = crest * 32;
-      const roll = (transition.direction > 0 ? 1 : -1) * crest * 5.5;
-      const scaleX = 1 - crest * 0.038;
+      const toSpread   = getSpread(transition.targetPage);
+      const progress   = transition.progress;
+      const crest      = Math.sin(progress * Math.PI);
+      const angle      = transition.direction > 0 ? -180 * progress : 180 * progress;
+      const shift      = (transition.direction > 0 ? -1 : 1) * crest * SETTINGS.pageWidth * 0.034;
+      const lift       = crest * 28;
+      const roll       = (transition.direction > 0 ? 1 : -1) * crest * 4.5;
+      const scaleX     = 1 - crest * 0.032;
 
-      applySlot(dom.currentLeft, fromSpread.left);
+      applySlot(dom.currentLeft,  fromSpread.left);
       applySlot(dom.currentRight, fromSpread.right);
 
       if (transition.direction > 0) {
-        applySlot(dom.targetLeft, fromSpread.left);
+        applySlot(dom.targetLeft,  fromSpread.left);
         applySlot(dom.targetRight, toSpread.right);
-        applySlot(dom.turnFront, fromSpread.right);
-        applySlot(dom.turnBack, toSpread.left);
-        const hideSide = progress > 0 ? 'right' : 'none';
-        if (dom.spreadCurrent.dataset.hideSide !== hideSide)
-          dom.spreadCurrent.dataset.hideSide = hideSide;
+        applySlot(dom.turnFront,   fromSpread.right);
+        applySlot(dom.turnBack,    toSpread.left);
+        dom.spreadCurrent.dataset.hideSide = progress > 0 ? 'right' : 'none';
       } else {
-        applySlot(dom.targetLeft, toSpread.left);
+        applySlot(dom.targetLeft,  toSpread.left);
         applySlot(dom.targetRight, fromSpread.right);
-        applySlot(dom.turnFront, fromSpread.left);
-        applySlot(dom.turnBack, toSpread.right);
-        const hideSide = progress > 0 ? 'left' : 'none';
-        if (dom.spreadCurrent.dataset.hideSide !== hideSide)
-          dom.spreadCurrent.dataset.hideSide = hideSide;
+        applySlot(dom.turnFront,   fromSpread.left);
+        applySlot(dom.turnBack,    toSpread.right);
+        dom.spreadCurrent.dataset.hideSide = progress > 0 ? 'left' : 'none';
       }
 
       const s = dom.bookRoot.style;
-      s.setProperty('--turn-rotate', angle.toFixed(3) + 'deg');
+      s.setProperty('--turn-rotate',  angle.toFixed(3) + 'deg');
       s.setProperty('--turn-shift-x', shift.toFixed(3) + 'px');
-      s.setProperty('--turn-lift', lift.toFixed(3) + 'px');
-      s.setProperty('--turn-roll', roll.toFixed(3) + 'deg');
-      s.setProperty('--turn-scale', scaleX.toFixed(4));
-      s.setProperty('--turn-shadow', clamp(crest, 0, 1).toFixed(3));
-
-      const sheenOpacity = crest;
-      if (dom.sheenFront) dom.sheenFront.style.opacity = sheenOpacity.toFixed(3);
-      if (dom.sheenBack) dom.sheenBack.style.opacity = (sheenOpacity * 0.6).toFixed(3);
+      s.setProperty('--turn-lift',    lift.toFixed(3)  + 'px');
+      s.setProperty('--turn-roll',    roll.toFixed(3)  + 'deg');
+      s.setProperty('--turn-scale',   scaleX.toFixed(4));
+      s.setProperty('--turn-shadow',  clamp(crest, 0, 1).toFixed(3));
+      if (dom.sheenFront) dom.sheenFront.style.opacity = crest.toFixed(3);
+      if (dom.sheenBack)  dom.sheenBack.style.opacity  = (crest * 0.6).toFixed(3);
     }
 
     function updateUI() {
