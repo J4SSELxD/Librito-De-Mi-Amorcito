@@ -1999,9 +1999,10 @@ const PAGES = [
 
       if (!state.gesture.active) {
         // Permitir activación si hay movimiento suficiente (horizontal O vertical)
+        // Umbrales reducidos para detectar gestos verticales más fácilmente
         const isMobile = window.innerWidth < 768;
-        const verticalThreshold = isMobile ? 30 : 40;
-        const hasSignificantMovement = Math.abs(dx) > SETTINGS.dragThreshold || Math.abs(dy) > verticalThreshold;
+        const verticalThreshold = isMobile ? 15 : 20;
+        const hasSignificantMovement = Math.abs(dx) > SETTINGS.dragThreshold || dy > verticalThreshold;
         
         if (!hasSignificantMovement) {
           return;
@@ -2067,7 +2068,7 @@ const PAGES = [
       const progress = state.transition ? state.transition.progress : 0;
       // Para gestos verticales de cierre, reducir el umbral de commit para que sea más fácil cerrar
       const isVerticalClose = state.transition && state.transition.type === 'cover-close';
-      const commitThreshold = isVerticalClose ? 0.15 : SETTINGS.dragCommit;
+      const commitThreshold = isVerticalClose ? 0.10 : SETTINGS.dragCommit;
       const commit = progress >= commitThreshold;
       const durationBase = state.transition && state.transition.type === 'turn'
         ? SETTINGS.turnDuration
@@ -2083,25 +2084,27 @@ const PAGES = [
 
     function resolveGestureActivation(side, dx, dy) {
       const isMobile = window.innerWidth < 768;
-      const verticalThreshold = isMobile ? 20 : 30;
+      const verticalThreshold = isMobile ? 15 : 20;
       const horizontalThreshold = SETTINGS.dragThreshold;
       
-      // 1. DETECTAR GESTO VERTICAL HACIA ABAJO PARA CERRAR (PRIORIDAD MÁXIMA)
-      // Si el movimiento vertical es claro hacia abajo, SIEMPRE priorizar cierre
-      const isVerticalDown = dy > verticalThreshold && dy > Math.abs(dx) * 0.6;
-      
-      if (isVerticalDown && state.isOpen) {
-        // Permitir cerrar desde páginas clave: página 2, 8, 9, 10
-        const canCloseFromPage = state.currentPage === 2 || state.currentPage >= 8;
-        
-        if (canCloseFromPage) {
-          return {
-            type: 'cover-close',
-            direction: -1,
-            fromPage: state.currentPage,
-            targetPage: 0,
-            isVertical: true,
-          };
+      // 1. DETECTAR GESTO VERTICAL HACIA ABAJO PARA CERRAR (PRIORIDAD ABSOLUTA)
+      // Si hay movimiento vertical hacia abajo suficiente, SIEMPRE activar cierre
+      if (dy > verticalThreshold && state.isOpen) {
+        // Verificar que el movimiento vertical sea mayor que el horizontal
+        // Esto permite gestos diagonales siempre que vayan principalmente hacia abajo
+        if (dy > Math.abs(dx) * 0.5) {
+          // Permitir cerrar desde páginas clave: página 2, 8, 9, 10
+          const canCloseFromPage = state.currentPage === 2 || state.currentPage >= 8;
+          
+          if (canCloseFromPage) {
+            return {
+              type: 'cover-close',
+              direction: -1,
+              fromPage: state.currentPage,
+              targetPage: 0,
+              isVertical: true,
+            };
+          }
         }
       }
       
@@ -2143,9 +2146,9 @@ const PAGES = [
 
     function computeGestureProgress(gesture, dx, dy) {
       // Para gestos verticales de cierre, usar el movimiento vertical (dy)
-      // Referencia: 25% del alto de la pantalla como distancia máxima necesaria
+      // Referencia: 20% del alto de la pantalla como distancia máxima necesaria
       if (gesture.isVertical && gesture.type === 'cover-close') {
-        const closeDistance = window.innerHeight * 0.25;
+        const closeDistance = window.innerHeight * 0.20;
         return clamp(dy / Math.max(1, closeDistance), 0, 1);
       }
       
