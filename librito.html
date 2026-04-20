@@ -2028,7 +2028,7 @@ const PAGES = [
         state.suppressClickUntil = performance.now() + 420;
       }
 
-      const progress = computeGestureProgress(state.gesture, dx);
+      const progress = computeGestureProgress(state.gesture, dx, dy);
       if (state.transition) {
         state.transition.progress = progress;
         scheduleRender();
@@ -2079,23 +2079,13 @@ const PAGES = [
     }
 
     function resolveGestureActivation(side, dx, dy) {
-      // 1. APERTURA DE PORTADA (solo con movimiento horizontal)
-      if (side === 'cover' && dx < -SETTINGS.dragThreshold && Math.abs(dx) > Math.abs(dy)) {
-        return {
-          type: 'cover-open',
-          direction: 1,
-          fromPage: 0,
-          targetPage: 2,
-        };
-      }
-      
-      // 2. DETECTAR GESTO VERTICAL HACIA ABAJO PARA CERRAR (PRIORIDAD ABSOLUTA)
-      // Permitir cerrar desde CUALQUIER punto de la pantalla con gesto vertical claro
       const isMobile = window.innerWidth < 768;
-      const verticalThreshold = isMobile ? 25 : 35;
-      const verticalRatio = isMobile ? 0.8 : 1.0;
+      const verticalThreshold = isMobile ? 20 : 30;
+      const horizontalThreshold = SETTINGS.dragThreshold;
       
-      const isVerticalDown = dy > verticalThreshold && Math.abs(dy) > Math.abs(dx) * verticalRatio;
+      // 1. DETECTAR GESTO VERTICAL HACIA ABAJO PARA CERRAR (PRIORIDAD MÁXIMA)
+      // Si el movimiento vertical es claro hacia abajo, SIEMPRE priorizar cierre
+      const isVerticalDown = dy > verticalThreshold && dy > Math.abs(dx) * 0.6;
       
       if (isVerticalDown && state.isOpen) {
         // Permitir cerrar desde páginas clave: página 2, 8, 9, 10
@@ -2107,38 +2097,55 @@ const PAGES = [
             direction: -1,
             fromPage: state.currentPage,
             targetPage: 0,
+            isVertical: true,
           };
         }
       }
       
-      // 3. AVANCE DE PÁGINA (deslizar izquierda) - desde derecha o centro
-      // Solo verificar si NO es un gesto vertical claro hacia abajo
-      const isNotVerticalDown = !(dy > 15 && Math.abs(dy) > Math.abs(dx) * 0.8);
+      // 2. APERTURA DE PORTADA (solo con movimiento horizontal)
+      if (side === 'cover' && dx < -horizontalThreshold && Math.abs(dx) > Math.abs(dy)) {
+        return {
+          type: 'cover-open',
+          direction: 1,
+          fromPage: 0,
+          targetPage: 2,
+          isVertical: false,
+        };
+      }
       
-      if (isNotVerticalDown && (side === 'right' || side === 'center') && dx < -SETTINGS.dragThreshold && state.isOpen && state.currentPage < 10) {
+      // 3. AVANCE DE PÁGINA (deslizar izquierda) - desde derecha o centro
+      if ((side === 'right' || side === 'center') && dx < -horizontalThreshold && state.isOpen && state.currentPage < 10) {
         return {
           type: 'turn',
           direction: 1,
           fromPage: state.currentPage,
           targetPage: getTargetPageForStep(1),
+          isVertical: false,
         };
       }
       
       // 4. RETROCESO DE PÁGINA (deslizar derecha) - desde izquierda O centro
-      // Solo verificar si NO es un gesto vertical claro hacia abajo
-      if (isNotVerticalDown && (side === 'left' || side === 'center') && dx > SETTINGS.dragThreshold && state.isOpen && state.currentPage > 2) {
+      if ((side === 'left' || side === 'center') && dx > horizontalThreshold && state.isOpen && state.currentPage > 2) {
         return {
           type: 'turn',
           direction: -1,
           fromPage: state.currentPage,
           targetPage: getTargetPageForStep(-1),
+          isVertical: false,
         };
       }
       
       return null;
     }
 
-    function computeGestureProgress(gesture, dx) {
+    function computeGestureProgress(gesture, dx, dy) {
+      // Para gestos verticales de cierre, usar el movimiento vertical (dy)
+      if (gesture.isVertical && gesture.type === 'cover-close') {
+        const closeHeight = gesture.rectWidth * 0.35; // Usar 35% del ancho como referencia
+        return clamp(dy / Math.max(1, closeHeight), 0, 1);
+      }
+      
+      // Para gestos horizontales de página, usar el movimiento horizontal (dx)
       const turnWidth = gesture.rectWidth * 0.58;
       if (gesture.direction > 0) {
         return clamp((-dx) / Math.max(1, turnWidth), 0, 1);
