@@ -677,7 +677,21 @@
         inset 0 0 0 1px rgba(116,82,59,0.08);
     }
 
-.turn-sheen-overlay { display: none; }
+    .turn-sheen-overlay {
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+      border-radius: inherit;
+      background: linear-gradient(
+        105deg,
+        transparent 20%,
+        rgba(255,255,255,0.18) 50%,
+        transparent 80%
+      );
+      opacity: 0;
+      will-change: opacity, transform;
+      transform: translateZ(0);
+    }
 
     .turn-face.back {
       transform: rotateY(180deg);
@@ -1023,9 +1037,11 @@
                 <div class='turn-card' id='turnCard'>
                   <article class='turn-face front' id='turnFront'>
                     <div class='turn-media'><img alt='' loading="lazy"></div>
+                    <div class="turn-sheen-overlay" aria-hidden="true"></div>
                   </article>
                   <article class='turn-face back' id='turnBack'>
                     <div class='turn-media'><img alt='' loading="lazy"></div>
+                    <div class="turn-sheen-overlay" aria-hidden="true"></div>
                   </article>
                 </div>
               </div>
@@ -1122,6 +1138,8 @@ const PAGES = [
       turnCard: document.getElementById('turnCard'),
       turnFront: document.getElementById('turnFront'),
       turnBack: document.getElementById('turnBack'),
+      sheenFront: document.querySelector('#turnFront .turn-sheen-overlay'),
+      sheenBack: document.querySelector('#turnBack .turn-sheen-overlay'),
       coverSheet: document.getElementById('coverSheet'),
       coverFront: document.getElementById('coverFront'),
       coverBack: document.getElementById('coverBack'),
@@ -1416,10 +1434,10 @@ const PAGES = [
     }
 
     function updatePages() {
+      const transition = state.transition;
       applySlot(dom.coverFront, getPage(1));
       applySlot(dom.coverBack, null);
 
-      const transition = state.transition;
       const coverProgress = transition
         ? transition.type === 'cover-open'
           ? transition.progress
@@ -1507,13 +1525,17 @@ const PAGES = [
         applySlot(dom.targetRight, toSpread.right);
         applySlot(dom.turnFront, fromSpread.right);
         applySlot(dom.turnBack, toSpread.left);
-        dom.spreadCurrent.dataset.hideSide = progress > 0 ? 'right' : 'none';
+        const hideSide = progress > 0 ? 'right' : 'none';
+        if (dom.spreadCurrent.dataset.hideSide !== hideSide)
+          dom.spreadCurrent.dataset.hideSide = hideSide;
       } else {
         applySlot(dom.targetLeft, toSpread.left);
         applySlot(dom.targetRight, fromSpread.right);
         applySlot(dom.turnFront, fromSpread.left);
         applySlot(dom.turnBack, toSpread.right);
-        dom.spreadCurrent.dataset.hideSide = progress > 0 ? 'left' : 'none';
+        const hideSide = progress > 0 ? 'left' : 'none';
+        if (dom.spreadCurrent.dataset.hideSide !== hideSide)
+          dom.spreadCurrent.dataset.hideSide = hideSide;
       }
 
       const s = dom.bookRoot.style;
@@ -1523,6 +1545,10 @@ const PAGES = [
       s.setProperty('--turn-roll', roll.toFixed(3) + 'deg');
       s.setProperty('--turn-scale', scaleX.toFixed(4));
       s.setProperty('--turn-shadow', clamp(crest, 0, 1).toFixed(3));
+
+      const sheenOpacity = crest;
+      if (dom.sheenFront) dom.sheenFront.style.opacity = sheenOpacity.toFixed(3);
+      if (dom.sheenBack) dom.sheenBack.style.opacity = (sheenOpacity * 0.6).toFixed(3);
     }
 
     function updateUI() {
