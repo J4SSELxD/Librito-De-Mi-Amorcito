@@ -350,7 +350,7 @@
         calc(max(14px, var(--safe-bottom)) + var(--footer-h) + 14px)
         0;
       overflow: hidden;
-      touch-action: pan-y pinch-zoom;
+      touch-action: none;
       z-index: 10;
       contain: layout style;
     }
@@ -2079,8 +2079,8 @@ const PAGES = [
     }
 
     function resolveGestureActivation(side, dx, dy) {
-      // 1. APERTURA DE PORTADA
-      if (side === 'cover' && dx < -SETTINGS.dragThreshold) {
+      // 1. APERTURA DE PORTADA (solo con movimiento horizontal)
+      if (side === 'cover' && dx < -SETTINGS.dragThreshold && Math.abs(dx) > Math.abs(dy)) {
         return {
           type: 'cover-open',
           direction: 1,
@@ -2092,8 +2092,8 @@ const PAGES = [
       // 2. DETECTAR GESTO VERTICAL HACIA ABAJO PARA CERRAR (PRIORIDAD ABSOLUTA)
       // Permitir cerrar desde CUALQUIER punto de la pantalla con gesto vertical claro
       const isMobile = window.innerWidth < 768;
-      const verticalThreshold = isMobile ? 30 : 40;
-      const verticalRatio = isMobile ? 1.0 : 1.2;
+      const verticalThreshold = isMobile ? 25 : 35;
+      const verticalRatio = isMobile ? 0.8 : 1.0;
       
       const isVerticalDown = dy > verticalThreshold && Math.abs(dy) > Math.abs(dx) * verticalRatio;
       
@@ -2113,7 +2113,7 @@ const PAGES = [
       
       // 3. AVANCE DE PÁGINA (deslizar izquierda) - desde derecha o centro
       // Solo verificar si NO es un gesto vertical claro hacia abajo
-      const isNotVerticalDown = !(dy > verticalThreshold && Math.abs(dy) > Math.abs(dx) * verticalRatio);
+      const isNotVerticalDown = !(dy > 15 && Math.abs(dy) > Math.abs(dx) * 0.8);
       
       if (isNotVerticalDown && (side === 'right' || side === 'center') && dx < -SETTINGS.dragThreshold && state.isOpen && state.currentPage < 10) {
         return {
