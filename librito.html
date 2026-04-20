@@ -2065,7 +2065,10 @@ const PAGES = [
       }
 
       const progress = state.transition ? state.transition.progress : 0;
-      const commit = progress >= SETTINGS.dragCommit;
+      // Para gestos verticales de cierre, reducir el umbral de commit para que sea más fácil cerrar
+      const isVerticalClose = state.transition && state.transition.type === 'cover-close';
+      const commitThreshold = isVerticalClose ? 0.15 : SETTINGS.dragCommit;
+      const commit = progress >= commitThreshold;
       const durationBase = state.transition && state.transition.type === 'turn'
         ? SETTINGS.turnDuration
         : state.transition && state.transition.type === 'cover-close'
@@ -2140,9 +2143,10 @@ const PAGES = [
 
     function computeGestureProgress(gesture, dx, dy) {
       // Para gestos verticales de cierre, usar el movimiento vertical (dy)
+      // Referencia: 25% del alto de la pantalla como distancia máxima necesaria
       if (gesture.isVertical && gesture.type === 'cover-close') {
-        const closeHeight = gesture.rectWidth * 0.35; // Usar 35% del ancho como referencia
-        return clamp(dy / Math.max(1, closeHeight), 0, 1);
+        const closeDistance = window.innerHeight * 0.25;
+        return clamp(dy / Math.max(1, closeDistance), 0, 1);
       }
       
       // Para gestos horizontales de página, usar el movimiento horizontal (dx)
