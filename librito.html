@@ -1998,10 +1998,35 @@ const PAGES = [
       const dy = event.clientY - state.gesture.startY;
 
       if (!state.gesture.active) {
-        // Permitir activación si hay movimiento suficiente (horizontal O vertical)
-        // Umbrales reducidos para detectar gestos verticales más fácilmente
+        // DETECCIÓN FORZADA DE GESTO VERTICAL PARA CERRAR
         const isMobile = window.innerWidth < 768;
-        const verticalThreshold = isMobile ? 15 : 20;
+        const verticalThreshold = isMobile ? 25 : 30;
+        
+        // PRIORIDAD 1: Gesto vertical hacia abajo para cerrar
+        if (state.isOpen && dy > verticalThreshold && dy > Math.abs(dx)) {
+          const canCloseFromPage = state.currentPage === 2 || state.currentPage >= 8;
+          if (canCloseFromPage) {
+            beginTransition({
+              type: 'cover-close',
+              direction: -1,
+              fromPage: state.currentPage,
+              targetPage: 0,
+              progress: 0,
+              interactive: true,
+            });
+            state.gesture.active = true;
+            state.gesture.direction = -1;
+            state.gesture.type = 'cover-close';
+            state.gesture.fromPage = state.currentPage;
+            state.gesture.targetPage = 0;
+            state.gesture.isVertical = true;
+            state.suppressClickUntil = performance.now() + 420;
+            event.preventDefault();
+            return;
+          }
+        }
+        
+        // Para otros gestos, usar resolveGestureActivation
         const hasSignificantMovement = Math.abs(dx) > SETTINGS.dragThreshold || dy > verticalThreshold;
         
         if (!hasSignificantMovement) {
@@ -2026,11 +2051,27 @@ const PAGES = [
         state.gesture.type = activation.type;
         state.gesture.fromPage = activation.fromPage;
         state.gesture.targetPage = activation.targetPage;
+        if (activation.isVertical) {
+          state.gesture.isVertical = true;
+        }
         state.suppressClickUntil = performance.now() + 420;
       }
 
-      const progress = computeGestureProgress(state.gesture, dx, dy);
-      if (state.transition) {
+      // Si el gesto está activo, calcular progreso y actualizar
+      if (state.gesture.active && state.transition) {
+        let progress = 0;
+        if (state.gesture.isVertical && state.gesture.type === 'cover-close') {
+          const closeDistance = window.innerHeight * 0.25;
+          progress = clamp(dy / Math.max(1, closeDistance), 0, 1);
+        } else if (state.transition) {
+          const turnWidth = state.gesture.rectWidth * 0.58;
+          if (state.gesture.direction > 0) {
+            progress = clamp((-dx) / Math.max(1, turnWidth), 0, 1);
+          } else {
+            progress = clamp(dx / Math.max(1, turnWidth), 0, 1);
+          }
+        }
+        
         state.transition.progress = progress;
         scheduleRender();
       }
