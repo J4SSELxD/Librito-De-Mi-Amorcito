@@ -2091,27 +2091,35 @@ const PAGES = [
           targetPage: getTargetPageForStep(1),
         };
       }
-      // Zona izquierda: cerrar libro (si está en páginas finales) o cambiar página hacia atrás
+      // Zona izquierda: diferenciar entre cierre (borde extremo) y retroceso de página (dentro del libro)
       if (side === 'left' && dx > SETTINGS.dragThreshold && state.isOpen) {
-        // Permitir cierre de libro desde páginas finales (2, 8, 9, 10, 11) con gesto lateral izquierdo
-        // Las vistas dobles son: 2-3, 4-5, 6-7, 8-9, 10-11. Cerrar desde 8-9 o 10-11
-        const canCloseFromPage = state.currentPage === 2 || 
-                                (state.currentPage >= 8 && state.currentPage <= 9) || 
-                                (state.currentPage >= 10 && state.currentPage <= 11);
-        if (canCloseFromPage) {
+        // Solo cerrar si el gesto inició desde el borde extremo de la pantalla (< 15px)
+        const isEdgeGesture = state.gesture.startX < 15;
+        
+        if (isEdgeGesture) {
+          // Permitir cierre de libro desde páginas finales con gesto desde el borde extremo
+          const canCloseFromPage = state.currentPage === 2 || 
+                                  (state.currentPage >= 8 && state.currentPage <= 9) || 
+                                  (state.currentPage >= 10 && state.currentPage <= 11);
+          if (canCloseFromPage) {
+            return {
+              type: 'cover-close',
+              direction: -1,
+              fromPage: state.currentPage,
+              targetPage: 0,
+            };
+          }
+        }
+        
+        // Si no es gesto de borde O no puede cerrar, permitir retroceso de página
+        if (state.currentPage > 2) {
           return {
-            type: 'cover-close',
+            type: 'turn',
             direction: -1,
             fromPage: state.currentPage,
-            targetPage: 0,
+            targetPage: getTargetPageForStep(-1),
           };
         }
-        return {
-          type: 'turn',
-          direction: -1,
-          fromPage: state.currentPage,
-          targetPage: getTargetPageForStep(-1),
-        };
       }
       return null;
     }
