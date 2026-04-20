@@ -2084,7 +2084,30 @@ const PAGES = [
         };
       }
       
-      // 2. AVANCE DE PÁGINA (deslizar izquierda) - desde derecha o centro
+      // 2. DETECTAR GESTO VERTICAL HACIA ABAJO PARA CERRAR (PRIORIDAD ALTA)
+      // Permitir cerrar desde CUALQUIER punto de la pantalla con gesto vertical claro
+      const isMobile = window.innerWidth < 768;
+      const verticalThreshold = isMobile ? 30 : 40;
+      const verticalRatio = isMobile ? 1.0 : 1.2;
+      
+      const isVerticalDown = dy > verticalThreshold && Math.abs(dy) > Math.abs(dx) * verticalRatio;
+      
+      if (isVerticalDown && state.isOpen) {
+        // Permitir cerrar desde páginas clave: página 2, 8, 9, 10
+        const canCloseFromPage = state.currentPage === 2 || state.currentPage >= 8;
+        
+        if (canCloseFromPage) {
+          return {
+            type: 'cover-close',
+            direction: -1,
+            fromPage: state.currentPage,
+            targetPage: 0,
+          };
+        }
+      }
+      
+      // 3. AVANCE DE PÁGINA (deslizar izquierda) - desde derecha o centro
+      // Solo si NO es gesto vertical hacia abajo
       if ((side === 'right' || side === 'center') && dx < -SETTINGS.dragThreshold && state.isOpen && state.currentPage < 10) {
         return {
           type: 'turn',
@@ -2094,47 +2117,15 @@ const PAGES = [
         };
       }
       
-      // 3. RETROCESO DE PÁGINA (deslizar derecha) - desde izquierda O centro
-      // Esto debe tener PRIORIDAD sobre el cierre para permitir navegación normal
+      // 4. RETROCESO DE PÁGINA (deslizar derecha) - desde izquierda O centro
+      // Solo si NO es gesto vertical hacia abajo
       if ((side === 'left' || side === 'center') && dx > SETTINGS.dragThreshold && state.isOpen && state.currentPage > 2) {
-        // Verificar si es un gesto VERTICAL claro hacia abajo para cerrar
-        const isVerticalClose = Math.abs(dy) > Math.abs(dx) * 1.5 && dy > 40;
-        
-        // Solo cerrar si es gesto vertical MUY claro y estamos en páginas finales
-        if (isVerticalClose) {
-          const canCloseFromPage = state.currentPage === 2 || 
-                                  (state.currentPage >= 8) || 
-                                  state.currentPage === 10;
-          if (canCloseFromPage) {
-            return {
-              type: 'cover-close',
-              direction: -1,
-              fromPage: state.currentPage,
-              targetPage: 0,
-            };
-          }
-        }
-        
-        // Por defecto: retroceder página (comportamiento normal)
         return {
           type: 'turn',
           direction: -1,
           fromPage: state.currentPage,
           targetPage: getTargetPageForStep(-1),
         };
-      }
-      
-      // 4. CIERRE DESDE ÚLTIMA PÁGINA con gesto vertical desde cualquier punto
-      if (state.currentPage >= 10 && state.isOpen) {
-        const isVerticalClose = Math.abs(dy) > Math.abs(dx) * 1.5 && dy > 40;
-        if (isVerticalClose) {
-          return {
-            type: 'cover-close',
-            direction: -1,
-            fromPage: state.currentPage,
-            targetPage: 0,
-          };
-        }
       }
       
       return null;
