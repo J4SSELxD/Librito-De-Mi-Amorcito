@@ -1100,6 +1100,25 @@ const PAGES = [
         : 1 - Math.pow(-2 * t + 2, 3) / 2;
     }
 
+    // LOOKUP TABLES (LUT) para trigonometría - Optimización de CPU
+    // Pre-calcular sin y cos para evitar cálculos costosos en el loop de animación
+    const LUT_SIZE = 101;
+    const LUT_SIN = new Float32Array(LUT_SIZE);
+    const LUT_CLAMP = new Float32Array(101);
+    
+    // Inicializar LUTs
+    for (let i = 0; i < LUT_SIZE; i++) {
+      const t = i / (LUT_SIZE - 1);
+      LUT_SIN[i] = Math.sin(t * Math.PI);
+      LUT_CLAMP[i] = t; // Para clamp rápido de 0-1
+    }
+
+    function fastSin(progress) {
+      // progress debe estar entre 0 y 1
+      const idx = Math.round(progress * (LUT_SIZE - 1));
+      return LUT_SIN[Math.max(0, Math.min(LUT_SIZE - 1, idx))];
+    }
+
     function getSpread(pageNumber) {
       return {
         left: getPage(pageNumber),
@@ -1149,7 +1168,10 @@ const PAGES = [
     }
 
     function buildSelector() {
-      const markup = VIEWS.map((view) => {
+      // OPTIMIZACIÓN: Solo generar markup para las primeras 3 vistas inicialmente
+      // El resto se genera bajo demanda (lazy DOM injection)
+      const initialViewsCount = Math.min(3, VIEWS.length);
+      const markup = VIEWS.slice(0, initialViewsCount).map((view) => {
         if (view.page === 0) {
           return [
             '<button class="selector-card" type="button" data-action="jump" data-page="0">',
@@ -1178,6 +1200,41 @@ const PAGES = [
       }).join('');
       dom.selectorGrid.innerHTML = markup;
       state.selectorItems = Array.from(dom.selectorGrid.querySelectorAll('.selector-card'));
+      state.selectorLastBuiltIndex = initialViewsCount - 1;
+    }
+
+    // OPTIMIZACIÓN: Generar vistas del selector bajo demanda
+    function ensureSelectorViewsBuilt(targetPage) {
+      if (!state.selectorItems || targetPage <= 0) return;
+      
+      // Encontrar índice de vista correspondiente
+      const targetViewIdx = VIEWS.findIndex(v => v.page === targetPage || v.page === targetPage - 1);
+      if (targetViewIdx < 0 || targetViewIdx <= state.selectorLastBuiltIndex) return;
+      
+      const buildUpTo = Math.min(VIEWS.length, state.selectorLastBuiltIndex + 3);
+      if (buildUpTo <= state.selectorLastBuiltIndex) return;
+
+      const newMarkup = VIEWS.slice(state.selectorLastBuiltIndex + 1, buildUpTo).map((view) => {
+        if (view.page === 0) return '';
+        return [
+          '<button class="selector-card" type="button" data-action="jump" data-page="' + String(view.page) + '">',
+          '<span class="selector-preview">',
+          '<img src="' + view.pages[0].src + '" alt="Página ' + String(view.page) + '" loading="lazy">',
+          '<img src="' + view.pages[1].src + '" alt="Página ' + String(view.page + 1) + '" loading="lazy">',
+          '</span>',
+          '<span class="selector-meta">',
+          '<span class="selector-label">' + view.label + '</span>',
+          '<span class="selector-caption">Vista doble</span>',
+          '</span>',
+          '</button>',
+        ].join('');
+      }).join('');
+
+      if (newMarkup) {
+        dom.selectorGrid.insertAdjacentHTML('beforeend', newMarkup);
+        state.selectorItems = Array.from(dom.selectorGrid.querySelectorAll('.selector-card'));
+        state.selectorLastBuiltIndex = buildUpTo - 1;
+      }
     }
 
     function bindEvents() {
@@ -1346,7 +1403,7 @@ const PAGES = [
       const fromSpread = getSpread(transition.fromPage);
       const toSpread   = getSpread(transition.targetPage);
       const progress   = transition.progress;
-      const crest      = Math.sin(progress * Math.PI);
+      const crest      = fastSin(progress); // Usar LUT en lugar de Math.sin
       const angle      = transition.direction > 0 ? -180 * progress : 180 * progress;
       const shift      = (transition.direction > 0 ? -1 : 1) * crest * SETTINGS.pageWidth * 0.034;
       const lift       = crest * 28;
@@ -2007,6 +2064,7 @@ const PAGES = [
         state.animationFrame = 0;
         transition.progress = target;
         render();
+        // OPTIMIZACIÓN: Reutilizar objeto transition en lugar de crear uno nuevo
         if (target >= 1) {
           commitTransition();
         } else {
@@ -2033,6 +2091,12 @@ const PAGES = [
         state.currentPage = transition.targetPage;
         state.isOpen = true;
       }
+      // OPTIMIZACIÓN: Limpiar propiedades en lugar de reasignar el objeto completo
+      transition.type = null;
+      transition.direction = 0;
+      transition.progress = 0;
+      transition.fromPage = 0;
+      transition.targetPage = 0;
       state.transition = null;
       state.isAnimating = false;
       state.gesture = null;
@@ -2146,6 +2210,8 @@ const PAGES = [
       }
       state.currentPage = targetPage;
       state.isOpen = true;
+      // OPTIMIZACIÓN: Generar vistas del selector bajo demanda cuando se navega
+      ensureSelectorViewsBuilt(targetPage);
       scheduleRender();
     }
 
