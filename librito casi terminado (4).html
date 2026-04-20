@@ -441,7 +441,7 @@
       transform: scale(var(--book-scale));
       transform-origin: center center;
       will-change: transform;
-      perspective: 3000px;
+      perspective: 2200px;
       transform-style: preserve-3d;
       user-select: none;
       -webkit-user-select: none;
@@ -492,7 +492,7 @@
     .spread-current {
       z-index: 18;
       opacity: var(--spread-opacity);
-      transition: opacity 140ms linear;
+      transition: opacity 70ms ease-out;
     }
 
     .spread-target {
@@ -511,6 +511,8 @@
       transform: translateZ(0);
       will-change: transform;
       backface-visibility: hidden;
+      -webkit-font-smoothing: antialiased;
+      filter: blur(0);
     }
 
     .page-card,
@@ -544,7 +546,12 @@
       position: absolute;
       inset: 0;
       pointer-events: none;
-      background: linear-gradient(180deg, rgba(255, 255, 255, 0.08), transparent 12%, transparent 82%, rgba(70, 48, 34, 0.09));
+      background: linear-gradient(105deg,
+        transparent calc(var(--turn-sheen, 0%) - 25%),
+        rgba(255,255,255,0.16) var(--turn-sheen, 0%),
+        transparent calc(var(--turn-sheen, 0%) + 25%)
+      ), linear-gradient(180deg, rgba(255, 255, 255, 0.08), transparent 12%, transparent 82%, rgba(70, 48, 34, 0.09));
+      transition: none;
     }
 
     .page-left::after {
@@ -553,6 +560,49 @@
 
     .page-right::after {
       box-shadow: inset 18px 0 18px -16px rgba(38, 20, 12, 0.28);
+    }
+
+    .corner-hint {
+      position: absolute;
+      bottom: 0;
+      right: 0;
+      width: 0;
+      height: 0;
+      border-style: solid;
+      border-width: 0 0 36px 36px;
+      border-color: transparent transparent rgba(220,190,165,0.45) transparent;
+      border-radius: 0 0 10px 0;
+      opacity: 0;
+      transition: opacity 300ms ease, transform 300ms ease;
+      transform: perspective(200px) rotateX(0deg);
+      pointer-events: none;
+    }
+    .book-root:not(.is-turning) .page-right:hover .corner-hint {
+      opacity: 1;
+      transform: perspective(200px) rotateX(8deg);
+    }
+    .book-root:not(.is-turning) .page-left:hover .corner-hint {
+      opacity: 1;
+      transform: perspective(200px) rotateX(-8deg);
+    }
+    .page-left .corner-hint {
+      right: auto;
+      left: 0;
+      border-width: 0 36px 36px 0;
+      border-color: transparent rgba(220,190,165,0.45) transparent transparent;
+      border-radius: 0 0 0 10px;
+    }
+
+    @keyframes book-float {
+      0%, 100% { transform: scale(var(--book-scale)) translateY(0px); }
+      50%       { transform: scale(var(--book-scale)) translateY(-6px); }
+    }
+    .book-root.is-idle {
+      animation: book-float 3.8s ease-in-out infinite;
+    }
+    .book-root.is-turning,
+    .book-root:not(.is-idle) {
+      animation: none;
     }
 
     .page-media,
@@ -630,6 +680,7 @@
       backface-visibility: hidden;
       box-shadow:
         0 20px 32px rgba(0,0,0,0.26),
+        0 0 calc(var(--turn-shadow,0) * 40px) calc(var(--turn-shadow,0) * 8px) rgba(0,0,0,calc(var(--turn-shadow,0) * 0.35)),
         inset 0 0 0 1px rgba(116,82,59,0.08);
     }
 
@@ -1046,9 +1097,9 @@ const PAGES = [
       minZoom: 0.85,
       maxZoom: 2.4,
       zoomStep: 0.16,
-      coverDuration: 920,
-      closeDuration: 820,
-      turnDuration: 860,
+      coverDuration: 680,
+      closeDuration: 600,
+      turnDuration: 640,
       dragThreshold: 12,
       dragCommit: 0.42,
       edgeRatio: 0.24,
@@ -1156,6 +1207,12 @@ const PAGES = [
         return 4 * value * value * value;
       }
       return 1 - Math.pow(-2 * value + 2, 3) / 2;
+    }
+
+    function easePageTurn(t) {
+      return t < 0.5
+        ? 8 * t * t * t * t
+        : 1 - Math.pow(-2 * t + 2, 3) / 2;
     }
 
     function getSpread(pageNumber) {
@@ -1296,7 +1353,9 @@ const PAGES = [
     function render() {
       updateScale();
       updatePages();
-      updateUI();
+      if (state.isAnimating === false) {
+        updateUI();
+      }
     }
 
     function updateScale() {
@@ -1400,9 +1459,9 @@ const PAGES = [
       const directionLabel = transition.direction > 0 ? 'forward' : 'backward';
       const angle = transition.direction > 0 ? -180 * progress : 180 * progress;
       const shift = (transition.direction > 0 ? -1 : 1) * crest * SETTINGS.pageWidth * 0.034;
-      const lift = crest * 18;
-      const roll = (transition.direction > 0 ? 1 : -1) * crest * 3.6;
-      const scaleX = 1 - crest * 0.024;
+      const lift = crest * 32;
+      const roll = (transition.direction > 0 ? 1 : -1) * crest * 5.5;
+      const scaleX = 1 - crest * 0.038;
 
       applySlot(dom.currentLeft, fromSpread.left);
       applySlot(dom.currentRight, fromSpread.right);
@@ -1431,6 +1490,7 @@ const PAGES = [
       dom.bookRoot.style.setProperty('--turn-roll', roll.toFixed(4) + 'deg');
       dom.bookRoot.style.setProperty('--turn-scale', scaleX.toFixed(5));
       dom.bookRoot.style.setProperty('--turn-shadow', clamp(crest, 0, 1).toFixed(4));
+      dom.bookRoot.style.setProperty('--turn-sheen', (crest * 100).toFixed(2) + '%');
     }
 
     function updateUI() {
@@ -1926,7 +1986,7 @@ const PAGES = [
           ? SETTINGS.closeDuration
           : SETTINGS.coverDuration;
       const delta = commit ? 1 - progress : progress;
-      const duration = Math.max(160, durationBase * Math.max(0.22, delta));
+      const duration = Math.max(80, durationBase * Math.max(0.22, delta));
       animateTransitionTo(commit ? 1 : 0, duration);
       state.gesture = null;
       state.suppressClickUntil = performance.now() + 420;
@@ -2047,15 +2107,16 @@ const PAGES = [
           return;
         }
         const raw = clamp((now - startedAt) / Math.max(1, duration), 0, 1);
-        transition.progress = start + delta * easeInOutCubic(raw);
-        scheduleRender();
+        const easingFn = transition.type === 'turn' ? easePageTurn : easeInOutCubic;
+        transition.progress = start + delta * easingFn(raw);
+        render();
         if (raw < 1) {
           state.animationFrame = requestAnimationFrame(frame);
           return;
         }
         state.animationFrame = 0;
         transition.progress = target;
-        scheduleRender();
+        render();
         if (target >= 1) {
           commitTransition();
         } else {
