@@ -2094,11 +2094,11 @@ const PAGES = [
       }
       // Zona izquierda O central: permitir retroceso de página desde CUALQUIER parte del libro
       if ((side === 'left' || side === 'center') && dx > SETTINGS.dragThreshold && state.isOpen) {
-        // Solo cerrar si el gesto inició desde el borde extremo de la pantalla (< 15px) Y estamos en zona izquierda
-        const isEdgeGesture = side === 'left' && state.gesture.startX < 15;
+        // Solo cerrar si el gesto es VERTICAL hacia abajo (swipe down) y estamos en páginas finales
+        const isVerticalClose = Math.abs(dy) > Math.abs(dx) && dy > 30; // dy positivo = hacia abajo
         
-        if (isEdgeGesture) {
-          // Permitir cierre de libro desde páginas finales con gesto desde el borde extremo
+        if (isVerticalClose) {
+          // Permitir cierre de libro desde páginas finales con gesto vertical hacia abajo
           const canCloseFromPage = state.currentPage === 2 || 
                                   (state.currentPage >= 8 && state.currentPage <= 9) || 
                                   (state.currentPage >= 10 && state.currentPage <= 11);
@@ -2112,7 +2112,7 @@ const PAGES = [
           }
         }
         
-        // Si no es gesto de borde O no puede cerrar, permitir retroceso de página desde cualquier zona
+        // Si no es gesto vertical O no puede cerrar, permitir retroceso de página desde cualquier zona
         if (state.currentPage > 2) {
           return {
             type: 'turn',
@@ -2122,14 +2122,17 @@ const PAGES = [
           };
         }
       }
-      // CORRECCIÓN: Última página - permitir cierre desde cualquier punto con deslizamiento hacia la derecha
-      if (state.currentPage === 10 && dx > SETTINGS.dragThreshold && state.isOpen) {
-        return {
-          type: 'cover-close',
-          direction: -1,
-          fromPage: state.currentPage,
-          targetPage: 0,
-        };
+      // CORRECCIÓN: Última página - permitir cierre con gesto vertical hacia abajo desde cualquier punto
+      if (state.currentPage === 10 && state.isOpen) {
+        const isVerticalClose = Math.abs(dy) > Math.abs(dx) && dy > 30;
+        if (isVerticalClose) {
+          return {
+            type: 'cover-close',
+            direction: -1,
+            fromPage: state.currentPage,
+            targetPage: 0,
+          };
+        }
       }
       return null;
     }
