@@ -249,9 +249,12 @@
       padding: 16px;
       border-radius: 24px;
       border: 1px solid rgba(255,255,255,0.12);
-      background: transparent;
+      background: rgba(20, 14, 12, 0.95);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
       overflow: auto;
       z-index: 84;
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
     }
 
     .page-selector[hidden] {
@@ -607,6 +610,66 @@
 
     .cover-face.back img {
       opacity: 0;
+    }
+
+    /* Botón de cierre rápido del libro */
+    .close-book-btn {
+      position: absolute;
+      bottom: 16px;
+      right: 16px;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 10px 16px;
+      border-radius: 999px;
+      border: 1px solid rgba(255, 255, 255, 0.18);
+      background: rgba(243, 197, 168, 0.15);
+      color: var(--text);
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: 0.02em;
+      cursor: pointer;
+      transition: all 150ms ease;
+      z-index: 50;
+      opacity: 0;
+      pointer-events: none;
+    }
+    .close-book-btn:not([hidden]) {
+      opacity: 1;
+      pointer-events: auto;
+    }
+    .close-book-btn:hover,
+    .close-book-btn:focus-visible {
+      background: rgba(243, 197, 168, 0.25);
+      border-color: var(--accent);
+      transform: translateY(-1px);
+      outline: none;
+    }
+    .close-book-btn:active {
+      transform: translateY(0px);
+      background: rgba(243, 197, 168, 0.3);
+    }
+    .close-book-btn svg {
+      width: 16px;
+      height: 16px;
+      fill: none;
+      stroke: var(--text);
+      stroke-width: 2;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+    }
+
+    @media (max-width: 560px) {
+      .close-book-btn {
+        bottom: 12px;
+        right: 12px;
+        padding: 8px 12px;
+        font-size: 11px;
+      }
+      .close-book-btn svg {
+        width: 14px;
+        height: 14px;
+      }
     }
 
     .app-shell.is-fullscreen .toolbar,
@@ -1001,8 +1064,8 @@ const PAGES = [
     // Ajustes dinámicos para móvil
     function updateSettingsForMobile() {
       const isMobile = window.innerWidth < 768;
-      SETTINGS.dragThreshold = isMobile ? 8 : 12;
-      SETTINGS.edgeRatio = isMobile ? 0.35 : 0.24;
+      SETTINGS.dragThreshold = isMobile ? 6 : 12;
+      SETTINGS.edgeRatio = isMobile ? 0.40 : 0.24;
     }
 
     SETTINGS.spreadWidth = SETTINGS.pageWidth * 2 + SETTINGS.pageGap;
@@ -1486,10 +1549,10 @@ const PAGES = [
         item.classList.toggle('is-active', itemPage === uiPage);
       });
 
-      // CORRECCIÓN: Mostrar botón de cerrar libro en las últimas dos páginas (páginas 9 y 10)
+      // CORRECCIÓN: Mostrar botón de cerrar libro en las últimas dos páginas (páginas 8 y 10)
       if (dom.closeBookBtn) {
         const totalPages = 10;
-        const showCloseBtn = state.isOpen && state.currentPage >= 9 && !state.isAnimating;
+        const showCloseBtn = state.isOpen && state.currentPage >= 8 && !state.isAnimating;
         dom.closeBookBtn.hidden = !showCloseBtn;
         dom.closeBookBtn.style.display = showCloseBtn ? 'inline-flex' : 'none';
         dom.closeBookBtn.style.opacity = showCloseBtn ? '1' : '0';
@@ -1536,9 +1599,7 @@ const PAGES = [
 
     function onDocumentPointerDown(event) {
       // CORRECCIÓN: Permitir clic en la portada para abrir el libro (laptop y móvil)
-      if (!state.isOpen && !state.selectorOpen && event.target.closest('#bookRoot')) {
-        // Solo abrir si no es un gesto de arrastre (se manejará en onPointerUp)
-        // Marcamos que hubo un pointerdown en la portada para procesarlo luego
+      if (!state.isOpen && !state.selectorOpen && event.target.closest('#coverSheet')) {
         state.coverClicked = true;
         return;
       }
@@ -2016,7 +2077,8 @@ const PAGES = [
         };
       }
       if (side === 'left' && dx > SETTINGS.dragThreshold && state.isOpen) {
-        if (state.currentPage === 2) {
+        // Permitir cierre de libro desde páginas finales (2, 8, 10) con gesto lateral izquierdo
+        if (state.currentPage === 2 || state.currentPage === 8 || state.currentPage === 10) {
           return {
             type: 'cover-close',
             direction: -1,
@@ -2188,7 +2250,11 @@ const PAGES = [
     }
 
     function closeBook() {
-      if (state.isAnimating || !state.isOpen || state.currentPage !== 2) {
+      if (state.isAnimating || !state.isOpen) {
+        return;
+      }
+      // Permitir cerrar libro desde cualquier página final (2, 8, 10)
+      if (state.currentPage !== 2 && state.currentPage !== 8 && state.currentPage !== 10) {
         return;
       }
       state.selectorOpen = false;
