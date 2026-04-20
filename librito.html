@@ -2002,7 +2002,7 @@ const PAGES = [
         if (Math.abs(dx) < SETTINGS.dragThreshold || Math.abs(dx) < Math.abs(dy) * 0.8) {
           return;
         }
-        const activation = resolveGestureActivation(state.gesture.side, dx);
+        const activation = resolveGestureActivation(state.gesture.side, dx, dy);
         if (!activation) {
           state.gesture = null;
           return;
@@ -2073,8 +2073,8 @@ const PAGES = [
       state.suppressClickUntil = performance.now() + 420;
     }
 
-    function resolveGestureActivation(side, dx) {
-      // CORRECCIÓN: Permitir cambio de página desde zona central ('center') y bordes laterales
+    function resolveGestureActivation(side, dx, dy) {
+      // 1. APERTURA DE PORTADA
       if (side === 'cover' && dx < -SETTINGS.dragThreshold) {
         return {
           type: 'cover-open',
@@ -2083,7 +2083,8 @@ const PAGES = [
           targetPage: 2,
         };
       }
-      // Zona derecha o central: cambiar página hacia adelante
+      
+      // 2. AVANCE DE PÁGINA (deslizar izquierda) - desde derecha o centro
       if ((side === 'right' || side === 'center') && dx < -SETTINGS.dragThreshold && state.isOpen && state.currentPage < 10) {
         return {
           type: 'turn',
@@ -2092,16 +2093,18 @@ const PAGES = [
           targetPage: getTargetPageForStep(1),
         };
       }
-      // Zona izquierda O central: permitir retroceso de página desde CUALQUIER parte del libro
-      if ((side === 'left' || side === 'center') && dx > SETTINGS.dragThreshold && state.isOpen) {
-        // Solo cerrar si el gesto es VERTICAL hacia abajo (swipe down) y estamos en páginas finales
-        const isVerticalClose = Math.abs(dy) > Math.abs(dx) && dy > 30; // dy positivo = hacia abajo
+      
+      // 3. RETROCESO DE PÁGINA (deslizar derecha) - desde izquierda O centro
+      // Esto debe tener PRIORIDAD sobre el cierre para permitir navegación normal
+      if ((side === 'left' || side === 'center') && dx > SETTINGS.dragThreshold && state.isOpen && state.currentPage > 2) {
+        // Verificar si es un gesto VERTICAL claro hacia abajo para cerrar
+        const isVerticalClose = Math.abs(dy) > Math.abs(dx) * 1.5 && dy > 40;
         
+        // Solo cerrar si es gesto vertical MUY claro y estamos en páginas finales
         if (isVerticalClose) {
-          // Permitir cierre de libro desde páginas finales con gesto vertical hacia abajo
           const canCloseFromPage = state.currentPage === 2 || 
-                                  (state.currentPage >= 8 && state.currentPage <= 9) || 
-                                  (state.currentPage >= 10 && state.currentPage <= 11);
+                                  (state.currentPage >= 8) || 
+                                  state.currentPage === 10;
           if (canCloseFromPage) {
             return {
               type: 'cover-close',
@@ -2112,19 +2115,18 @@ const PAGES = [
           }
         }
         
-        // Si no es gesto vertical O no puede cerrar, permitir retroceso de página desde cualquier zona
-        if (state.currentPage > 2) {
-          return {
-            type: 'turn',
-            direction: -1,
-            fromPage: state.currentPage,
-            targetPage: getTargetPageForStep(-1),
-          };
-        }
+        // Por defecto: retroceder página (comportamiento normal)
+        return {
+          type: 'turn',
+          direction: -1,
+          fromPage: state.currentPage,
+          targetPage: getTargetPageForStep(-1),
+        };
       }
-      // CORRECCIÓN: Última página - permitir cierre con gesto vertical hacia abajo desde cualquier punto
-      if (state.currentPage === 10 && state.isOpen) {
-        const isVerticalClose = Math.abs(dy) > Math.abs(dx) && dy > 30;
+      
+      // 4. CIERRE DESDE ÚLTIMA PÁGINA con gesto vertical desde cualquier punto
+      if (state.currentPage >= 10 && state.isOpen) {
+        const isVerticalClose = Math.abs(dy) > Math.abs(dx) * 1.5 && dy > 40;
         if (isVerticalClose) {
           return {
             type: 'cover-close',
@@ -2134,6 +2136,7 @@ const PAGES = [
           };
         }
       }
+      
       return null;
     }
 
