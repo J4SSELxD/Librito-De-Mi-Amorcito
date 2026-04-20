@@ -1186,34 +1186,32 @@
     </footer>
 
     <!-- Modal de Ayuda/Guía -->
-    <div id='helpModal' class='help-modal' style='display: none;'>
-      <div class='help-modal-content'>
-        <h2>📖 Cómo usar este libro</h2>
-        <div class='help-section'>
-          <h3>👆 Gestos táctiles:</h3>
-          <ul>
-            <li><strong>Deslizar hacia la izquierda:</strong> Avanzar página</li>
-            <li><strong>Deslizar hacia la derecha:</strong> Retroceder página</li>
-            <li><strong>Deslizar hacia abajo:</strong> Cerrar el libro (desde páginas 2, 8, 9 o 10)</li>
-          </ul>
+    <div id='helpModal' class='help-modal' style='display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); backdrop-filter: blur(5px); z-index: 10000; justify-content: center; align-items: center; opacity: 0; pointer-events: none; transition: opacity 0.5s ease;'>
+      <div class='help-modal-content' style="background: linear-gradient(135deg, #fff0f5 0%, #ffe4e1 100%); padding: 40px 30px; border-radius: 30px; max-width: 90%; width: 420px; text-align: center; box-shadow: 0 20px 50px rgba(0,0,0,0.3); border: 4px solid #fff; transform: scale(0.9); transition: transform 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);">
+        <h2 style="color: #d63384; margin-bottom: 25px; font-size: 28px; font-weight: 800; text-shadow: 1px 1px 0px rgba(255,255,255,0.5);">✨ Bienvenido a Nuestra Historia ✨</h2>
+        
+        <div style="text-align: left; background: rgba(255,255,255,0.6); padding: 20px; border-radius: 20px; margin-bottom: 25px; border: 2px dashed #ffb6c1;">
+          <p style="margin: 15px 0; color: #555; font-size: 16px; line-height: 1.5; display: flex; align-items: center;">
+            <span style="font-size: 24px; margin-right: 12px;">📖</span> 
+            <strong>Abrir:</strong> Desliza la portada hacia la izquierda.
+          </p>
+          <p style="margin: 15px 0; color: #555; font-size: 16px; line-height: 1.5; display: flex; align-items: center;">
+            <span style="font-size: 24px; margin-right: 12px;">👉</span> 
+            <strong>Navegar:</strong> Desliza horizontalmente para pasar las páginas.
+          </p>
+          <p style="margin: 15px 0; color: #555; font-size: 16px; line-height: 1.5; display: flex; align-items: center;">
+            <span style="font-size: 24px; margin-right: 12px;">💖</span> 
+            <strong>Cerrar:</strong> Desliza suavemente hacia abajo desde cualquier parte.
+          </p>
         </div>
-        <div class='help-section'>
-          <h3>💻 En computadora:</h3>
-          <ul>
-            <li>Usa las flechas del teclado ← → para navegar</li>
-            <li>Haz clic en los botones "Anterior" y "Siguiente"</li>
-            <li>Arrastra con el mouse para simular el gesto táctil</li>
-          </ul>
-        </div>
-        <div class='help-section'>
-          <h3>✨ Consejos:</h3>
-          <ul>
-            <li>Puedes cerrar el libro deslizando desde cualquier parte de la pantalla hacia abajo</li>
-            <li>El gesto debe ser suave y principalmente vertical</li>
-            <li>Usa pellizco para hacer zoom en las páginas</li>
-          </ul>
-        </div>
-        <button class='help-accept-button' id='helpAcceptButton'>¡Entendido!</button>
+
+        <p style="color: #888; font-size: 14px; margin-bottom: 30px; font-style: italic;">
+          "Disfruta cada página de este pequeño regalo hecho con todo mi amor para ti."
+        </p>
+
+        <button class='help-accept-button' id='helpAcceptButton' style="background: linear-gradient(45deg, #ff6b6b, #d63384); color: white; border: none; padding: 15px 40px; font-size: 18px; font-weight: bold; border-radius: 50px; cursor: pointer; box-shadow: 0 5px 15px rgba(214, 51, 132, 0.4); transition: transform 0.2s, box-shadow 0.2s;">
+          ¡Entendido, vamos allá! 💕
+        </button>
       </div>
     </div>
   </div>
@@ -1526,20 +1524,36 @@ const PAGES = [
       
       if (helpButton) {
         helpButton.addEventListener('click', () => {
-          if (helpModal) helpModal.style.display = 'flex';
+          if (helpModal) {
+            helpModal.style.display = 'flex';
+            setTimeout(() => {
+              helpModal.style.opacity = '1';
+              helpModal.querySelector('.help-modal-content').style.transform = 'scale(1)';
+            }, 10);
+          }
         });
       }
       
       if (helpAcceptButton) {
         helpAcceptButton.addEventListener('click', () => {
-          if (helpModal) helpModal.style.display = 'none';
+          if (helpModal) {
+            helpModal.style.opacity = '0';
+            helpModal.querySelector('.help-modal-content').style.transform = 'scale(0.9)';
+            setTimeout(() => {
+              helpModal.style.display = 'none';
+            }, 500);
+          }
         });
       }
       
       if (helpModal) {
         helpModal.addEventListener('click', (e) => {
           if (e.target === helpModal) {
-            helpModal.style.display = 'none';
+            helpModal.style.opacity = '0';
+            helpModal.querySelector('.help-modal-content').style.transform = 'scale(0.9)';
+            setTimeout(() => {
+              helpModal.style.display = 'none';
+            }, 500);
           }
         });
       }
@@ -2660,6 +2674,10 @@ const PAGES = [
         const helpModal = document.getElementById('helpModal');
         if (helpModal) {
           helpModal.style.display = 'flex';
+          setTimeout(() => {
+            helpModal.style.opacity = '1';
+            helpModal.querySelector('.help-modal-content').style.transform = 'scale(1)';
+          }, 10);
         }
       }, 500);
     }
