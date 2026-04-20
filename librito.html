@@ -1598,9 +1598,11 @@ const PAGES = [
     }
 
     function onDocumentPointerDown(event) {
-      // CORRECCIÓN: Permitir clic en la portada para abrir el libro (laptop y móvil)
+      // CORRECCIÓN: Permitir clic en la portada para abrir el libro con UN SOLO CLIC
       if (!state.isOpen && !state.selectorOpen && event.target.closest('#coverSheet')) {
         state.coverClicked = true;
+        // Prevenir propagación para evitar conflictos con otros handlers
+        event.stopPropagation();
         return;
       }
       
@@ -1628,13 +1630,10 @@ const PAGES = [
         return;
       }
       
-      // CORRECCIÓN: Permitir abrir libro con clic en portada incluso si no es exactamente en bookRoot
-      if (!state.isOpen) {
-        const coverClicked = event.target.closest('#coverSheet') || event.target.closest('#bookRoot');
-        if (coverClicked) {
-          openBook(2);
-          return;
-        }
+      // CORRECCIÓN: Abrir libro con UN SOLO CLIC en la portada - eliminar lógica redundante
+      if (!state.isOpen && event.target.closest('#coverSheet')) {
+        // Ya fue manejado por onDocumentPointerDown y onPointerUp
+        return;
       }
       
       if (!event.target.closest('#bookRoot')) {
@@ -1930,14 +1929,23 @@ const PAGES = [
       const localX = event.clientX - rect.left;
       const edgeWidth = rect.width * SETTINGS.edgeRatio;
       let side = null;
+      
+      // CORRECCIÓN: Permitir gestos desde CUALQUIER PARTE del libro, no solo bordes
       if (!state.isOpen) {
         side = 'cover';
-      } else if (localX <= edgeWidth) {
-        side = 'left';
-      } else if (localX >= rect.width - edgeWidth) {
-        side = 'right';
+      } else {
+        // Determinar zona: bordes extremos para cierre, centro para cambio de página
+        if (localX <= edgeWidth) {
+          side = 'left';
+        } else if (localX >= rect.width - edgeWidth) {
+          side = 'right';
+        } else {
+          // Zona central - permitir arrastre para cambio de página
+          side = 'center';
+        }
       }
 
+      // Si no hay lado válido (fuera del libro), cancelar gesto
       if (!side) {
         state.gesture = null;
         return;
@@ -2032,12 +2040,11 @@ const PAGES = [
       
       updatePinchState();
 
-      // CORRECCIÓN: Abrir libro al hacer clic en portada (si no hubo arrastre)
-      if (state.coverClicked && !state.gesture && !state.isOpen) {
+      // CORRECCIÓN: Abrir libro con UN SOLO CLIC en portada - sin dependencia de gesture
+      if (state.coverClicked && !state.isOpen) {
         state.coverClicked = false;
-        if (performance.now() >= state.suppressClickUntil) {
-          openBook(2);
-        }
+        // Abrir inmediatamente si no hubo movimiento significativo
+        openBook(2);
         return;
       }
       state.coverClicked = false;
@@ -2066,6 +2073,7 @@ const PAGES = [
     }
 
     function resolveGestureActivation(side, dx) {
+      // CORRECCIÓN: Permitir cambio de página desde zona central ('center') y bordes laterales
       if (side === 'cover' && dx < -SETTINGS.dragThreshold) {
         return {
           type: 'cover-open',
@@ -2074,7 +2082,8 @@ const PAGES = [
           targetPage: 2,
         };
       }
-      if (side === 'right' && dx < -SETTINGS.dragThreshold && state.isOpen && state.currentPage < 10) {
+      // Zona derecha o central: cambiar página hacia adelante
+      if ((side === 'right' || side === 'center') && dx < -SETTINGS.dragThreshold && state.isOpen && state.currentPage < 10) {
         return {
           type: 'turn',
           direction: 1,
@@ -2082,6 +2091,7 @@ const PAGES = [
           targetPage: getTargetPageForStep(1),
         };
       }
+      // Zona izquierda: cerrar libro (si está en páginas finales) o cambiar página hacia atrás
       if (side === 'left' && dx > SETTINGS.dragThreshold && state.isOpen) {
         // Permitir cierre de libro desde páginas finales (2, 8, 9, 10, 11) con gesto lateral izquierdo
         // Las vistas dobles son: 2-3, 4-5, 6-7, 8-9, 10-11. Cerrar desde 8-9 o 10-11
