@@ -115,7 +115,7 @@
       padding: 10px 14px;
       border-radius: 28px;
       border: 1px solid rgba(255, 255, 255, 0.12);
-      background: #161210;
+      background: transparent;
       pointer-events: auto;
     }
 
@@ -140,7 +140,7 @@
       gap: 8px;
       padding: 4px;
       border-radius: 999px;
-      background: rgba(255,255,255,0.04);
+      background: transparent;
       border: 1px solid rgba(255,255,255,0.07);
       min-width: 0;
     }
@@ -149,7 +149,7 @@
       appearance: none;
       border: 1px solid rgba(255, 255, 255, 0.18);
       border-radius: 999px;
-      background: #1f1916;
+      background: transparent;
       color: var(--text);
       min-width: 44px;
       height: 44px;
@@ -167,7 +167,7 @@
     .control-button:hover,
     .control-button:focus-visible {
       border-color: var(--accent);
-      background: #2a1f1a;
+      background: rgba(255,255,255,0.06);
       transform: translateY(-1px);
       outline: none;
     }
@@ -178,7 +178,7 @@
     }
     .control-button:active {
       transform: translateY(0px);
-      background: #231a16;
+      background: rgba(255,255,255,0.1);
     }
     .control-button svg {
       fill: var(--text);
@@ -249,7 +249,7 @@
       padding: 16px;
       border-radius: 24px;
       border: 1px solid rgba(255,255,255,0.12);
-      background: #131110;
+      background: transparent;
       overflow: auto;
       z-index: 84;
     }
@@ -272,7 +272,7 @@
       padding: 10px;
       border-radius: 18px;
       border: 1px solid rgba(255,255,255,0.1);
-      background: rgba(255,255,255,0.03);
+      background: transparent;
       color: var(--text);
       display: flex;
       flex-direction: column;
@@ -1486,10 +1486,13 @@ const PAGES = [
         item.classList.toggle('is-active', itemPage === uiPage);
       });
 
-      // CORRECCIÓN: Mostrar botón de cerrar libro en las últimas dos páginas
+      // CORRECCIÓN: Mostrar botón de cerrar libro en las últimas dos páginas (páginas 9 y 10)
       if (dom.closeBookBtn) {
-        const showCloseBtn = state.isOpen && state.currentPage >= 8 && !state.isAnimating;
+        const totalPages = 10;
+        const showCloseBtn = state.isOpen && state.currentPage >= 9 && !state.isAnimating;
         dom.closeBookBtn.hidden = !showCloseBtn;
+        dom.closeBookBtn.style.display = showCloseBtn ? 'inline-flex' : 'none';
+        dom.closeBookBtn.style.opacity = showCloseBtn ? '1' : '0';
       }
     }
 
@@ -1563,6 +1566,16 @@ const PAGES = [
       if (performance.now() < state.suppressClickUntil || state.isAnimating) {
         return;
       }
+      
+      // CORRECCIÓN: Permitir abrir libro con clic en portada incluso si no es exactamente en bookRoot
+      if (!state.isOpen) {
+        const coverClicked = event.target.closest('#coverSheet') || event.target.closest('#bookRoot');
+        if (coverClicked) {
+          openBook(2);
+          return;
+        }
+      }
+      
       if (!event.target.closest('#bookRoot')) {
         return;
       }
