@@ -1998,10 +1998,15 @@ const PAGES = [
       const dy = event.clientY - state.gesture.startY;
 
       if (!state.gesture.active) {
-        // Permitir gestos ligeramente diagonales (80% horizontal es suficiente)
-        if (Math.abs(dx) < SETTINGS.dragThreshold || Math.abs(dx) < Math.abs(dy) * 0.8) {
+        // Permitir activación si hay movimiento suficiente (horizontal O vertical)
+        const isMobile = window.innerWidth < 768;
+        const verticalThreshold = isMobile ? 30 : 40;
+        const hasSignificantMovement = Math.abs(dx) > SETTINGS.dragThreshold || Math.abs(dy) > verticalThreshold;
+        
+        if (!hasSignificantMovement) {
           return;
         }
+        
         const activation = resolveGestureActivation(state.gesture.side, dx, dy);
         if (!activation) {
           state.gesture = null;
@@ -2084,7 +2089,7 @@ const PAGES = [
         };
       }
       
-      // 2. DETECTAR GESTO VERTICAL HACIA ABAJO PARA CERRAR (PRIORIDAD ALTA)
+      // 2. DETECTAR GESTO VERTICAL HACIA ABAJO PARA CERRAR (PRIORIDAD ABSOLUTA)
       // Permitir cerrar desde CUALQUIER punto de la pantalla con gesto vertical claro
       const isMobile = window.innerWidth < 768;
       const verticalThreshold = isMobile ? 30 : 40;
@@ -2107,8 +2112,10 @@ const PAGES = [
       }
       
       // 3. AVANCE DE PÁGINA (deslizar izquierda) - desde derecha o centro
-      // Solo si NO es gesto vertical hacia abajo
-      if ((side === 'right' || side === 'center') && dx < -SETTINGS.dragThreshold && state.isOpen && state.currentPage < 10) {
+      // Solo verificar si NO es un gesto vertical claro hacia abajo
+      const isNotVerticalDown = !(dy > verticalThreshold && Math.abs(dy) > Math.abs(dx) * verticalRatio);
+      
+      if (isNotVerticalDown && (side === 'right' || side === 'center') && dx < -SETTINGS.dragThreshold && state.isOpen && state.currentPage < 10) {
         return {
           type: 'turn',
           direction: 1,
@@ -2118,8 +2125,8 @@ const PAGES = [
       }
       
       // 4. RETROCESO DE PÁGINA (deslizar derecha) - desde izquierda O centro
-      // Solo si NO es gesto vertical hacia abajo
-      if ((side === 'left' || side === 'center') && dx > SETTINGS.dragThreshold && state.isOpen && state.currentPage > 2) {
+      // Solo verificar si NO es un gesto vertical claro hacia abajo
+      if (isNotVerticalDown && (side === 'left' || side === 'center') && dx > SETTINGS.dragThreshold && state.isOpen && state.currentPage > 2) {
         return {
           type: 'turn',
           direction: -1,
