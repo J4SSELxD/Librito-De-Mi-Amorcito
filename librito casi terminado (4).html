@@ -1409,7 +1409,7 @@ const PAGES = [
         dom.bookRoot.classList.toggle('is-turning', shouldBeTurning);
 
       if (transition && transition.type === 'turn') {
-        if (!dom.turnLayer.hidden) dom.turnLayer.hidden = false;
+        if (dom.turnLayer.hidden) dom.turnLayer.hidden = false;
         if (dom.turnLayer.getAttribute('aria-hidden') !== 'false')
           dom.turnLayer.setAttribute('aria-hidden', 'false');
         if (dom.spreadTarget.getAttribute('aria-hidden') !== 'false')
