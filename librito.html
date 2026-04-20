@@ -901,6 +901,87 @@
         display: none;
       }
     }
+
+    /* Modal de Ayuda */
+    .help-modal {
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.85);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 1000;
+      padding: 20px;
+    }
+
+    .help-modal-content {
+      background: linear-gradient(135deg, #1a1412 0%, #2a1f1c 100%);
+      border: 1px solid var(--panel-border);
+      border-radius: 16px;
+      padding: 32px;
+      max-width: 500px;
+      width: 100%;
+      max-height: 85vh;
+      overflow-y: auto;
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+    }
+
+    .help-modal-content h2 {
+      margin: 0 0 24px 0;
+      font-size: 24px;
+      color: var(--accent);
+      text-align: center;
+    }
+
+    .help-section {
+      margin-bottom: 20px;
+    }
+
+    .help-section h3 {
+      margin: 0 0 12px 0;
+      font-size: 16px;
+      color: var(--accent-strong);
+    }
+
+    .help-section ul {
+      margin: 0;
+      padding-left: 20px;
+      list-style-type: disc;
+    }
+
+    .help-section li {
+      margin-bottom: 8px;
+      color: var(--text);
+      line-height: 1.5;
+    }
+
+    .help-section li strong {
+      color: var(--accent);
+    }
+
+    .help-accept-button {
+      display: block;
+      width: 100%;
+      padding: 14px 24px;
+      margin-top: 24px;
+      background: linear-gradient(135deg, var(--accent) 0%, var(--accent-strong) 100%);
+      color: #1a1412;
+      border: none;
+      border-radius: 8px;
+      font-size: 16px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: transform 0.2s, box-shadow 0.2s;
+    }
+
+    .help-accept-button:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 20px rgba(243, 197, 168, 0.3);
+    }
+
+    .help-accept-button:active {
+      transform: translateY(0);
+    }
   </style>
 </head>
 <body>
@@ -1024,9 +1105,44 @@
             <span class='button-label'>Siguiente</span>
             <svg viewBox='0 0 24 24' aria-hidden='true'><path d='M9 6l6 6-6 6'></path></svg>
           </button>
+          <button class='control-button' id='helpButton' type='button' aria-label='Ayuda' title='Cómo usar el libro'>
+            <svg viewBox='0 0 24 24' aria-hidden='true'><path d='M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 17h-2v-2h2v2zm2.07-7.75l-.9.92C13.45 12.9 13 13.5 13 15h-2v-.5c0-1.1.45-2.1 1.17-2.83l1.24-1.26c.37-.36.59-.86.59-1.41 0-1.1-.9-2-2-2s-2 .9-2 2H8c0-2.21 1.79-4 4-4s4 1.79 4 4c0 .88-.36 1.68-.93 2.25z'></path></svg>
+          </button>
         </div>
       </div>
     </footer>
+
+    <!-- Modal de Ayuda/Guía -->
+    <div id='helpModal' class='help-modal' style='display: none;'>
+      <div class='help-modal-content'>
+        <h2>📖 Cómo usar este libro</h2>
+        <div class='help-section'>
+          <h3>👆 Gestos táctiles:</h3>
+          <ul>
+            <li><strong>Deslizar hacia la izquierda:</strong> Avanzar página</li>
+            <li><strong>Deslizar hacia la derecha:</strong> Retroceder página</li>
+            <li><strong>Deslizar hacia abajo:</strong> Cerrar el libro (desde páginas 2, 8, 9 o 10)</li>
+          </ul>
+        </div>
+        <div class='help-section'>
+          <h3>💻 En computadora:</h3>
+          <ul>
+            <li>Usa las flechas del teclado ← → para navegar</li>
+            <li>Haz clic en los botones "Anterior" y "Siguiente"</li>
+            <li>Arrastra con el mouse para simular el gesto táctil</li>
+          </ul>
+        </div>
+        <div class='help-section'>
+          <h3>✨ Consejos:</h3>
+          <ul>
+            <li>Puedes cerrar el libro deslizando desde cualquier parte de la pantalla hacia abajo</li>
+            <li>El gesto debe ser suave y principalmente vertical</li>
+            <li>Usa pellizco para hacer zoom en las páginas</li>
+          </ul>
+        </div>
+        <button class='help-accept-button' id='helpAcceptButton'>¡Entendido!</button>
+      </div>
+    </div>
   </div>
 
   <script>
@@ -1053,7 +1169,7 @@ const PAGES = [
       maxZoom: 2.4,
       zoomStep: 0.16,
       coverDuration: 680,
-      closeDuration: 600,
+      closeDuration: 900,  // Aumentado de 600ms a 900ms para que el cierre sea más lento y controlado
       turnDuration: 640,
       dragThreshold: 12,
       dragCommit: 0.42,
@@ -1329,6 +1445,32 @@ const PAGES = [
       window.addEventListener('pointercancel', onPointerUp, { passive: true });
       dom.viewer.addEventListener('wheel', onWheel, { passive: false });
       document.addEventListener('fullscreenchange', onFullscreenChange);
+      
+      // Eventos para el modal de ayuda
+      const helpButton = document.getElementById('helpButton');
+      const helpModal = document.getElementById('helpModal');
+      const helpAcceptButton = document.getElementById('helpAcceptButton');
+      
+      if (helpButton) {
+        helpButton.addEventListener('click', () => {
+          if (helpModal) helpModal.style.display = 'flex';
+        });
+      }
+      
+      if (helpAcceptButton) {
+        helpAcceptButton.addEventListener('click', () => {
+          if (helpModal) helpModal.style.display = 'none';
+        });
+      }
+      
+      if (helpModal) {
+        helpModal.addEventListener('click', (e) => {
+          if (e.target === helpModal) {
+            helpModal.style.display = 'none';
+          }
+        });
+      }
+      
       resizeObserver = new ResizeObserver(() => {
         updateSettingsForMobile();
         measureViewer();
@@ -2446,6 +2588,14 @@ const PAGES = [
       onFullscreenChange();
       scheduleRender();
       warmImages();
+      
+      // Mostrar modal de ayuda al inicio (después de un breve delay)
+      setTimeout(() => {
+        const helpModal = document.getElementById('helpModal');
+        if (helpModal) {
+          helpModal.style.display = 'flex';
+        }
+      }, 500);
     }
 
     init();
