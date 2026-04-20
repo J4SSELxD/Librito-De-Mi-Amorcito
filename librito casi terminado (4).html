@@ -677,21 +677,7 @@
         inset 0 0 0 1px rgba(116,82,59,0.08);
     }
 
-    .turn-sheen-overlay {
-      position: absolute;
-      inset: 0;
-      pointer-events: none;
-      border-radius: inherit;
-      background: linear-gradient(
-        105deg,
-        transparent 20%,
-        rgba(255,255,255,0.18) 50%,
-        transparent 80%
-      );
-      opacity: 0;
-      will-change: opacity, transform;
-      transform: translateZ(0);
-    }
+.turn-sheen-overlay { display: none; }
 
     .turn-face.back {
       transform: rotateY(180deg);
@@ -1037,11 +1023,9 @@
                 <div class='turn-card' id='turnCard'>
                   <article class='turn-face front' id='turnFront'>
                     <div class='turn-media'><img alt='' loading="lazy"></div>
-                    <div class="turn-sheen-overlay" aria-hidden="true"></div>
                   </article>
                   <article class='turn-face back' id='turnBack'>
                     <div class='turn-media'><img alt='' loading="lazy"></div>
-                    <div class="turn-sheen-overlay" aria-hidden="true"></div>
                   </article>
                 </div>
               </div>
@@ -1399,26 +1383,42 @@ const PAGES = [
             : 1
         : state.isOpen ? 1 : 0;
 
-      dom.bookRoot.dataset.coverHidden = coverProgress >= 0.999 ? 'true' : 'false';
-      dom.bookRoot.classList.toggle('is-turning', transition && transition.type === 'turn');
+      if (dom.bookRoot.dataset.coverHidden !== (coverProgress >= 0.999 ? 'true' : 'false'))
+        dom.bookRoot.dataset.coverHidden = coverProgress >= 0.999 ? 'true' : 'false';
+
+      const shouldBeTurning = transition && transition.type === 'turn';
+      if (dom.bookRoot.classList.contains('is-turning') !== shouldBeTurning)
+        dom.bookRoot.classList.toggle('is-turning', shouldBeTurning);
 
       if (transition && transition.type === 'turn') {
-        dom.turnLayer.hidden = false;
-        dom.turnLayer.setAttribute('aria-hidden', 'false');
-        dom.spreadTarget.setAttribute('aria-hidden', 'false');
+        if (!dom.turnLayer.hidden) dom.turnLayer.hidden = false;
+        if (dom.turnLayer.getAttribute('aria-hidden') !== 'false')
+          dom.turnLayer.setAttribute('aria-hidden', 'false');
+        if (dom.spreadTarget.getAttribute('aria-hidden') !== 'false')
+          dom.spreadTarget.setAttribute('aria-hidden', 'false');
         const directionLabel = transition.direction > 0 ? 'forward' : 'backward';
-        dom.turnLayer.dataset.direction = directionLabel;
+        if (dom.turnLayer.dataset.direction !== directionLabel)
+          dom.turnLayer.dataset.direction = directionLabel;
       } else {
-        dom.turnLayer.hidden = true;
-        dom.turnLayer.setAttribute('aria-hidden', 'true');
-        dom.spreadTarget.setAttribute('aria-hidden', 'true');
+        if (!dom.turnLayer.hidden) dom.turnLayer.hidden = true;
+        if (dom.turnLayer.getAttribute('aria-hidden') !== 'true')
+          dom.turnLayer.setAttribute('aria-hidden', 'true');
+        if (dom.spreadTarget.getAttribute('aria-hidden') !== 'true')
+          dom.spreadTarget.setAttribute('aria-hidden', 'true');
       }
 
-      dom.coverSheet.setAttribute('aria-hidden', showOpenState && coverProgress >= 0.999 ? 'true' : 'false');
-      dom.spreadCurrent.dataset.hideSide = 'none';
+      const coverHiddenValue = showOpenState && coverProgress >= 0.999 ? 'true' : 'false';
+      if (dom.coverSheet.getAttribute('aria-hidden') !== coverHiddenValue)
+        dom.coverSheet.setAttribute('aria-hidden', coverHiddenValue);
+
+      if (dom.spreadCurrent.dataset.hideSide !== 'none')
+        dom.spreadCurrent.dataset.hideSide = 'none';
     }
 
     function updatePages() {
+      applySlot(dom.coverFront, getPage(1));
+      applySlot(dom.coverBack, null);
+
       const transition = state.transition;
       const coverProgress = transition
         ? transition.type === 'cover-open'
@@ -1523,12 +1523,6 @@ const PAGES = [
       s.setProperty('--turn-roll', roll.toFixed(3) + 'deg');
       s.setProperty('--turn-scale', scaleX.toFixed(4));
       s.setProperty('--turn-shadow', clamp(crest, 0, 1).toFixed(3));
-
-      const sheenOpacity = crest;
-      const frontOverlay = dom.turnFront.querySelector('.turn-sheen-overlay');
-      const backOverlay = dom.turnBack.querySelector('.turn-sheen-overlay');
-      if (frontOverlay) frontOverlay.style.opacity = sheenOpacity.toFixed(4);
-      if (backOverlay) backOverlay.style.opacity = (sheenOpacity * 0.6).toFixed(4);
     }
 
     function updateUI() {
